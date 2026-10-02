@@ -75,47 +75,99 @@ function figureSize() {
   return Math.min(innerHeight * 0.19, innerWidth * 0.23);
 }
 
-// How many mawilos fit on the board at the start, from about 4 on a phone
-// to about 10 on a large screen.
-function capacity() {
-  const size = figureSize();
-  const cols = Math.floor(innerWidth / (size * 1.5));
-  const rows = Math.floor((innerHeight * 0.85) / (size * 1.35));
-  return clamp(Math.round(cols * rows * 0.6), 4, 12);
+// Width divided by height for each image, filled in by loadAspects.
+const ASPECT = {};
+
+function loadAspects() {
+  return Promise.all(
+    MAWILO_DATA.map(
+      (m) =>
+        new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            ASPECT[m.file] = img.naturalWidth / img.naturalHeight;
+            resolve();
+          };
+          img.onerror = () => resolve();
+          img.src = `img/${m.file}.png`;
+        }),
+    ),
+  );
 }
 
-// Scatter mawilos loosely over the board, the same way on every load. Each
-// new spot is the best of several random tries, the one furthest from the
-// mawilos already placed.
+// Where the title rests below the line, in pixels.
+function titleRect() {
+  const title = document.getElementById("title");
+  const w = title.offsetWidth;
+  const h = title.offsetHeight;
+  return { left: (innerWidth - w) / 2, top: lineHeight, right: (innerWidth + w) / 2, bottom: lineHeight + h };
+}
+
+// The size of a figure on screen, in pixels.
+function figureBox(name, size) {
+  const h = figureSize() * (SCALE[name] || 1) * size;
+  return { w: h * (ASPECT[name] || 1), h };
+}
+
+// A spot is valid when the figure is fully on screen, below the line, and
+// clear of the title.
+function validSpot(p, box) {
+  const margin = 10;
+  const cx = p.x * innerWidth;
+  const cy = p.y * innerHeight;
+  const left = cx - box.w / 2;
+  const right = cx + box.w / 2;
+  const top = cy - box.h / 2;
+  const bottom = cy + box.h / 2;
+  if (left < 8 || right > innerWidth - 8 || top < lineHeight + 4 || bottom > innerHeight - 36) {
+    return false;
+  }
+  const t = titleRect();
+  const overlaps =
+    left < t.right + margin && right > t.left - margin && top < t.bottom + margin && bottom > t.top - margin;
+  return !overlaps;
+}
+
+// How many mawilos fit on the board at the start, from about 4 on a phone
+// to about 10 on a large screen. The line and the title take up room too.
+function capacity() {
+  const size = figureSize();
+  const t = titleRect();
+  const free = innerWidth * (innerHeight - lineHeight) - (t.right - t.left) * (t.bottom - t.top);
+  return clamp(Math.round((free / (size * 1.5 * size * 1.35)) * 0.6), 4, 12);
+}
+
+// Pick the best of many random spots: a valid one furthest from the other
+// mawilos. If no try is valid, fall back to the middle below the title.
+function bestSpot(rand, box, others) {
+  const aspect = innerWidth / innerHeight;
+  let best = null;
+  let bestDist = -1;
+  for (let k = 0; k < 80; k++) {
+    const p = { x: rand(), y: rand() };
+    if (!validSpot(p, box)) continue;
+    const dist = Math.min(1, ...others.map((q) => Math.hypot((p.x - q.x) * aspect, p.y - q.y)));
+    if (dist > bestDist) {
+      best = p;
+      bestDist = dist;
+    }
+  }
+  if (best) return best;
+  const t = titleRect();
+  return { x: 0.5, y: Math.min(0.85, (t.bottom + box.h / 2 + 12) / innerHeight) };
+}
+
+// Scatter mawilos loosely over the board, the same way on every load, with
+// slightly varied sizes and never over the title.
 function scatterLayout(names) {
   const rand = seededRandom(7);
-  const top = boardTop();
-  const aspect = innerWidth / innerHeight;
   const placed = [];
   const layout = {};
   names.forEach((name, i) => {
-    let best = null;
-    let bestDist = -1;
-    for (let k = 0; k < 12; k++) {
-      const p = { x: 0.12 + rand() * 0.76, y: top + rand() * (0.84 - top) };
-      const dist = Math.min(
-        Math.min(p.x, 1 - p.x) * aspect * 1.5,
-        Math.min(p.y, 1 - p.y) * 1.5,
-        ...placed.map((q) => Math.hypot((p.x - q.x) * aspect, p.y - q.y)),
-      );
-      if (dist > bestDist) {
-        best = p;
-        bestDist = dist;
-      }
-    }
-    placed.push(best);
-    layout[name] = {
-      ...best,
-      r: (rand() - 0.5) * 16,
-      z: i + 1,
-      // Vary the sizes a little so the board does not look like a grid.
-      size: 0.82 + rand() * 0.4,
-    };
+    const size = 0.82 + rand() * 0.4;
+    const spot = bestSpot(rand, figureBox(name, size), placed);
+    placed.push(spot);
+    layout[name] = { ...spot, r: (rand() - 0.5) * 16, z: i + 1, size };
   });
   return layout;
 }
@@ -149,29 +201,36 @@ function buildLine() {
   addEventListener("resize", layoutLine);
 }
 
-// Hang the photos along a sagging string. On narrow screens the line is
-// wider than the screen and scrolls sideways.
+// Hang the photos along sagging strings: one line on wide screens and two
+// on narrow ones. If the photos still do not fit, the line scrolls sideways.
 function layoutLine() {
   const n = MAWILO_DATA.length;
-  const slot = clamp((innerWidth - 24) / n, 56, 80);
-  const photo = slot * 0.8;
-  const width = Math.max(innerWidth, slot * n + 24);
-  const top = 14;
-  const sag = Math.min(26, width * 0.02);
-  lineHeight = top + sag + photo * 1.25 + 14;
-  document.documentElement.style.setProperty("--line-h", `${lineHeight}px`);
-  lineInner.style.width = `${width}px`;
-  stringPath.setAttribute("d", `M 0 ${top} Q ${width / 2} ${top + sag * 2} ${width} ${top}`);
-  const start = (width - slot * n) / 2;
+  const rows = innerWidth < 640 ? 2 : 1;
+  const perRow = Math.ceil(n / rows);
+  const slot = clamp((innerWidth - 16) / perRow, 34, 80);
+  const photo = slot * 0.82;
+  const width = Math.max(innerWidth, slot * perRow + 16);
+  const sag = clamp(width * 0.045, 14, 56);
+  const rowGap = photo * 1.25 + 22;
+  const start = (width - slot * perRow) / 2;
+  let d = "";
   MAWILO_DATA.forEach((m, i) => {
-    const x = start + slot * (i + 0.5);
+    const row = Math.floor(i / perRow);
+    const top = 16 + row * rowGap;
+    if (i % perRow === 0) d += `M 0 ${top} Q ${width / 2} ${top + sag * 2} ${width} ${top} `;
+    const x = start + slot * ((i % perRow) + 0.5);
     const t = x / width;
     const y = (1 - t) ** 2 * top + 2 * (1 - t) * t * (top + sag * 2) + t ** 2 * top;
     const button = polaroids.get(m.file);
     button.style.left = `${x}px`;
     button.style.top = `${y - 4}px`;
     button.style.width = `${photo}px`;
+    button.style.setProperty("--photo", `${photo}px`);
   });
+  lineHeight = 16 + (rows - 1) * rowGap + sag + photo * 1.22 + 12;
+  document.documentElement.style.setProperty("--line-h", `${lineHeight}px`);
+  lineInner.style.width = `${width}px`;
+  stringPath.setAttribute("d", d.trim());
 }
 
 function swing(button) {
@@ -206,32 +265,11 @@ function exitEdge(f) {
   return byFile.get(f.name).edge ? "bottom" : nearestEdge(f);
 }
 
-// The top of the area where mawilos stand, below the line and most of the
+// A spot on the board away from the mawilos already there, clear of the
 // title.
-function boardTop() {
-  const title = document.getElementById("title");
-  return clamp((lineHeight + title.offsetHeight * 0.6) / innerHeight, 0.12, 0.45);
-}
-
-// A spot on the board away from the mawilos already there.
-function freeSpot() {
-  const aspect = innerWidth / innerHeight;
-  const top = boardTop();
+function freeSpot(name) {
   const others = [...figures.values()].filter((f) => f.state === "resident");
-  let best = null;
-  let bestDist = -1;
-  for (let k = 0; k < 24; k++) {
-    const p = { x: 0.12 + Math.random() * 0.76, y: top + Math.random() * (0.85 - top) };
-    const dist = Math.min(
-      1,
-      ...others.map((q) => Math.hypot((p.x - q.x) * aspect, p.y - q.y)),
-    );
-    if (dist > bestDist) {
-      best = p;
-      bestDist = dist;
-    }
-  }
-  return best;
+  return bestSpot(Math.random, figureBox(name, 1), others);
 }
 
 // Clicking a photo on the line brings that mawilo in, or sends it out if
@@ -243,7 +281,7 @@ async function invite(name) {
     return;
   }
   if (f?.state === "leaving") return;
-  const spot = freeSpot();
+  const spot = freeSpot(name);
   if (f?.state === "waiting") {
     clearTimeout(f.leaveTimer);
     waiting = null;
@@ -973,6 +1011,7 @@ async function intro(onStage, layout) {
 
 async function start() {
   buildLine();
+  await Promise.all([loadAspects(), document.fonts.ready]);
   const saved = loadLayout();
   const walkers = MAWILO_DATA.filter((m) => !m.edge).map((m) => m.file);
   let onStage;
