@@ -1,161 +1,233 @@
 :root {
-  --wall: #f3e6d3;
-  --wall-dot: #e8d4b8;
-  --floor: #b88a5c;
-  --floor-dark: #9a6f45;
+  --bg: #f7f1e8;
+  --ground: #ece1cf;
   --ink: #3b2416;
+  --muted: #a08c78;
+  --rim: #e8b53c;
 }
 
 * {
   box-sizing: border-box;
 }
 
-html,
+html {
+  background: var(--bg);
+}
+
 body {
   margin: 0;
-  height: 100%;
-  overflow: hidden;
-  background: var(--wall);
-  font-family: "Georgia", serif;
+  background: var(--bg);
   color: var(--ink);
+  font-family: "Fredoka", system-ui, sans-serif;
+  overflow-x: hidden;
 }
 
-.theatre {
-  position: relative;
+/* The intro is taller than the screen so the title stays pinned while its
+   letters rise. */
+.intro {
+  height: 170vh;
+}
+
+.intro-pin {
+  position: sticky;
+  top: 0;
   height: 100vh;
-  height: 100dvh;
-  overflow: hidden;
+  display: grid;
+  place-items: center;
 }
 
-.stage {
-  position: absolute;
-  inset: 0;
+.title {
+  margin: 0;
+  display: flex;
+  font-size: clamp(64px, 16vw, 200px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  /* Clip only the bottom edge so the letters appear to come up from behind it. */
+  clip-path: inset(-50% -50% 0 -50%);
+  padding-bottom: 0.08em;
+  border-bottom: 2px solid var(--ground);
 }
 
-.layer {
-  position: absolute;
-  inset: -40px;
-  will-change: transform;
-}
-
-.wall {
-  background-color: var(--wall);
-  background-image: radial-gradient(var(--wall-dot) 2px, transparent 2.5px);
-  background-size: 28px 28px;
-}
-
-.floor {
-  top: auto;
-  height: calc(38% + 40px);
-  background:
-    repeating-linear-gradient(90deg, transparent 0 118px, var(--floor-dark) 118px 120px),
-    linear-gradient(var(--floor), var(--floor-dark));
-  box-shadow: 0 -6px 18px rgb(0 0 0 / 0.15);
-}
-
-.row {
-  inset: 0 -60px;
-  pointer-events: none;
-}
-
-/* A walker moves across the screen; its inner image waddles in place. */
-.walker {
-  position: absolute;
-  left: 0;
-  pointer-events: auto;
-  cursor: pointer;
-  will-change: transform;
-}
-
-.walker img {
-  display: block;
-  height: 100%;
-  width: auto;
+.letter {
+  display: inline-block;
   transform-origin: 50% 100%;
-  animation: waddle var(--step, 0.6s) ease-in-out infinite alternate;
-  filter: drop-shadow(0 6px 4px rgb(0 0 0 / 0.25));
+}
+
+.hint {
+  position: absolute;
+  bottom: 8vh;
+  margin: 0;
+  color: var(--muted);
+  font-size: 18px;
+  letter-spacing: 0.2em;
+}
+
+/* Each scene holds one mawilo that rises from behind the ground line. */
+
+.scene {
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr auto 1fr;
+  align-items: end;
+  padding: 0 6vw;
+  view-timeline-name: --scene;
+}
+
+.window {
+  grid-row: 2;
+  height: min(60vh, 70vw);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  clip-path: inset(-50% -50% 0 -50%);
+}
+
+.window img {
+  height: 92%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  transform-origin: 50% 100%;
   user-select: none;
-  -webkit-user-drag: none;
 }
 
-.back .walker {
-  bottom: 34%;
-  height: min(22vh, 30vw);
+.ground {
+  grid-row: 3;
+  grid-column: 1 / -1;
+  align-self: start;
+  height: 10vh;
+  background: linear-gradient(var(--ground), transparent);
+  border-top: 2px solid var(--ground);
 }
 
-.back .walker img {
-  filter: saturate(0.7) brightness(0.92) blur(0.6px);
+.name {
+  grid-row: 2;
+  align-self: center;
+  margin: 0;
+  font-size: clamp(22px, 3.2vw, 40px);
+  color: var(--muted);
 }
 
-.mid .walker {
-  bottom: 18%;
-  height: min(30vh, 40vw);
+.left .window {
+  grid-column: 1;
 }
 
-.front .walker {
-  bottom: 2%;
-  height: min(40vh, 52vw);
+.left .name {
+  grid-column: 2;
 }
 
-.walker.paused img {
-  animation-play-state: paused;
+.right .window {
+  grid-column: 2;
 }
 
-@keyframes waddle {
+.right .name {
+  grid-column: 1;
+  grid-row: 2;
+  text-align: right;
+}
+
+@media (max-width: 700px) {
+  .scene {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto auto 1fr;
+  }
+
+  .left .window,
+  .right .window {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .ground {
+    grid-row: 3;
+  }
+
+  .left .name,
+  .right .name {
+    grid-column: 1;
+    grid-row: 4;
+    align-self: start;
+    text-align: center;
+  }
+}
+
+.outro {
+  height: 60vh;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 20px;
+}
+
+/* Scroll-driven motion. Browsers without scroll timelines show everything
+   in place. */
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .letter {
+      animation: rise linear both;
+      animation-timeline: scroll(root);
+      animation-range: calc(var(--i) * 2.5vh) calc(var(--i) * 2.5vh + 30vh);
+    }
+
+    .hint {
+      animation: fade-out linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 15vh;
+    }
+
+    .window img {
+      animation: rise linear both;
+      animation-timeline: --scene;
+      animation-range: entry 30% contain 30%;
+    }
+
+    .name {
+      animation: slide-in linear both;
+      animation-timeline: --scene;
+      animation-range: entry 70% contain 35%;
+    }
+  }
+}
+
+/* The figure comes up dark with a warm rim of light on top, overshoots a
+   little, and settles with a small squash. */
+@keyframes rise {
+  0% {
+    transform: translateY(105%);
+    filter: brightness(0.35) drop-shadow(0 -3px 0 var(--rim));
+  }
+  60% {
+    transform: translateY(-4%);
+    filter: brightness(0.85) drop-shadow(0 -2px 0 var(--rim));
+  }
+  75% {
+    transform: translateY(0) scale(1.05, 0.95);
+  }
+  88% {
+    transform: translateY(0) scale(0.98, 1.02);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1);
+    filter: brightness(1) drop-shadow(0 0 0 transparent);
+  }
+}
+
+@keyframes slide-in {
   from {
-    transform: rotate(calc(var(--tilt, 6deg) * -1)) translateY(0);
-  }
-  50% {
-    transform: rotate(0deg) translateY(-6%);
-  }
-  to {
-    transform: rotate(var(--tilt, 6deg)) translateY(0);
-  }
-}
-
-.peeker {
-  position: absolute;
-  bottom: 0;
-  height: 38vh;
-  transform: translateY(100%);
-  transition: transform 900ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  pointer-events: auto;
-  cursor: pointer;
-}
-
-.peeker.left {
-  left: 6%;
-}
-
-.peeker.right {
-  right: -2%;
-}
-
-.peeker.up {
-  transform: translateY(18%);
-}
-
-.heart {
-  position: absolute;
-  font-size: 28px;
-  pointer-events: none;
-  animation: float-up 1100ms ease-out forwards;
-}
-
-@keyframes float-up {
-  to {
-    transform: translate(var(--dx), -140px) scale(0.4) rotate(var(--rot));
     opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .walker img,
-  .heart {
-    animation: none;
-  }
-
-  .peeker {
-    transition: none;
+@keyframes fade-out {
+  to {
+    opacity: 0;
   }
 }

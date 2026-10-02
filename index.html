@@ -3,20 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mawilo Theatre</title>
+  <title>Mawilos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap">
   <link rel="stylesheet" href="style.css">
   <script src="main.js" defer></script>
 </head>
 <body>
-  <main class="theatre">
-    <div class="stage" id="stage">
-      <div class="wall layer" data-depth="0.15"></div>
-      <div class="floor layer" data-depth="0.3"></div>
-      <div class="row layer back" data-depth="0.35" data-row="back"></div>
-      <div class="row layer mid" data-depth="0.6" data-row="mid"></div>
-      <div class="row layer front" data-depth="1" data-row="front"></div>
-      <div class="peekers layer" data-depth="1.2" id="peekers"></div>
+  <header class="intro">
+    <div class="intro-pin">
+      <h1 class="title" id="title" aria-label="Mawilos"></h1>
+      <p class="hint">scroll</p>
     </div>
-  </main>
+  </header>
+  <main id="scenes"></main>
+  <footer class="outro">
+    <p>Made by hand, one at a time.</p>
+  </footer>
 </body>
 </html>
