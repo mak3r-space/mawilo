@@ -217,11 +217,4 @@ function start() {
   requestAnimationFrame(tick);
 }
 
-const openButton = document.getElementById("open");
-openButton.addEventListener("click", () => {
-  document.body.classList.add("open");
-});
-
-if (location.hash === "#open") document.body.classList.add("open");
-
 start();

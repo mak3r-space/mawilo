@@ -3,10 +3,6 @@
   --wall-dot: #e8d4b8;
   --floor: #b88a5c;
   --floor-dark: #9a6f45;
-  --velvet: #9e1b2c;
-  --velvet-dark: #6b0f1c;
-  --velvet-light: #c4344a;
-  --gold: #e0b14a;
   --ink: #3b2416;
 }
 
@@ -19,7 +15,7 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: var(--velvet-dark);
+  background: var(--wall);
   font-family: "Georgia", serif;
   color: var(--ink);
 }
@@ -153,115 +149,12 @@ body {
   }
 }
 
-/* Curtain */
-
-.curtain {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 51%;
-  z-index: 10;
-  background:
-    linear-gradient(180deg, rgb(0 0 0 / 0.25), transparent 20%, transparent 85%, rgb(0 0 0 / 0.35)),
-    repeating-linear-gradient(90deg,
-      var(--velvet-dark) 0px,
-      var(--velvet) 22px,
-      var(--velvet-light) 34px,
-      var(--velvet) 46px,
-      var(--velvet-dark) 70px);
-  transition:
-    transform 1600ms cubic-bezier(0.65, 0, 0.25, 1.15),
-    width 1600ms cubic-bezier(0.65, 0, 0.25, 1.15);
-  box-shadow: 0 0 40px rgb(0 0 0 / 0.5);
-}
-
-.curtain.left {
-  left: 0;
-  transform-origin: 0 0;
-}
-
-.curtain.right {
-  right: 0;
-  transform-origin: 100% 0;
-}
-
-/* When open, each panel bunches into a narrow swag at the side. */
-.open .curtain {
-  width: 14%;
-}
-
-@media (max-width: 600px) {
-  .open .curtain {
-    width: 7%;
-  }
-}
-
-.open .curtain.left {
-  transform: skewX(4deg);
-}
-
-.open .curtain.right {
-  transform: skewX(-4deg);
-}
-
-.valance {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 9vh;
-  z-index: 11;
-  background: linear-gradient(var(--velvet-dark), var(--velvet));
-  border-bottom: 4px solid var(--gold);
-  filter: drop-shadow(0 6px 8px rgb(0 0 0 / 0.4));
-}
-
-/* A row of scallops hangs below the valance. */
-.valance::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
-  height: 28px;
-  margin-top: 4px;
-  background: radial-gradient(circle at 50% 0, var(--velvet) 27px, transparent 28px) 0 0 / 56px 28px repeat-x;
-}
-
-.open-button {
-  position: absolute;
-  left: 50%;
-  top: 55%;
-  z-index: 12;
-  transform: translate(-50%, -50%);
-  padding: 14px 28px;
-  border: 3px solid var(--gold);
-  border-radius: 999px;
-  background: var(--velvet-dark);
-  color: var(--gold);
-  font: inherit;
-  font-size: 20px;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  transition: opacity 300ms, transform 300ms;
-}
-
-.open-button:hover {
-  transform: translate(-50%, -50%) scale(1.05) rotate(-2deg);
-}
-
-.open .open-button {
-  opacity: 0;
-  pointer-events: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .walker img,
   .heart {
     animation: none;
   }
 
-  .curtain,
   .peeker {
     transition: none;
   }
