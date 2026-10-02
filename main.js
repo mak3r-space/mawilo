@@ -217,17 +217,19 @@ function layoutLine() {
   MAWILO_DATA.forEach((m, i) => {
     const row = Math.floor(i / perRow);
     const top = 16 + row * rowGap;
-    if (i % perRow === 0) d += `M 0 ${top} Q ${width / 2} ${top + sag * 2} ${width} ${top} `;
+    // The lower line sags a little more than the upper one.
+    const rowSag = sag * (1 + row * 0.5);
+    if (i % perRow === 0) d += `M 0 ${top} Q ${width / 2} ${top + rowSag * 2} ${width} ${top} `;
     const x = start + slot * ((i % perRow) + 0.5);
     const t = x / width;
-    const y = (1 - t) ** 2 * top + 2 * (1 - t) * t * (top + sag * 2) + t ** 2 * top;
+    const y = (1 - t) ** 2 * top + 2 * (1 - t) * t * (top + rowSag * 2) + t ** 2 * top;
     const button = polaroids.get(m.file);
     button.style.left = `${x}px`;
     button.style.top = `${y - 4}px`;
     button.style.width = `${photo}px`;
     button.style.setProperty("--photo", `${photo}px`);
   });
-  lineHeight = 16 + (rows - 1) * rowGap + sag + photo * 1.22 + 12;
+  lineHeight = 16 + (rows - 1) * rowGap + sag * (1 + (rows - 1) * 0.5) + photo * 1.22 + 12;
   document.documentElement.style.setProperty("--line-h", `${lineHeight}px`);
   lineInner.style.width = `${width}px`;
   stringPath.setAttribute("d", d.trim());
@@ -597,7 +599,9 @@ function enableDrag(f) {
     f.el.classList.toggle("edge-zone", fullyOnScreen(f) && pointerZone(f, event) > DRAG_ZONE);
   });
   f.el.addEventListener("pointerleave", () => {
-    if (!f.dragging) f.el.classList.remove("edge-zone");
+    if (f.dragging) return;
+    f.el.classList.remove("edge-zone");
+    polaroids.get(f.name)?.classList.remove("active");
   });
 
   // Greet a mouse that comes over, at most once every 1.5 seconds.
@@ -605,6 +609,7 @@ function enableDrag(f) {
   f.el.addEventListener("pointerenter", (event) => {
     if (reducedMotion || event.pointerType !== "mouse" || f.dragging) return;
     if (f.state !== "resident" && f.state !== "waiting") return;
+    polaroids.get(f.name)?.classList.add("active");
     if (performance.now() - lastGreeting < 1500) return;
     lastGreeting = performance.now();
     playMove(f, pick(["wiggle", "hop"]));
@@ -651,6 +656,7 @@ function enableDrag(f) {
     centreX = box.left + box.width / 2;
     centreY = box.top + box.height / 2;
     startAngle = Math.atan2(event.clientY - centreY, event.clientX - centreX);
+    polaroids.get(f.name)?.classList.add("active");
     f.fromEdge = !fullyOnScreen(f);
     mode = !f.fromEdge && pointerZone(f, event) > DRAG_ZONE ? "turn" : "drag";
     f.el.classList.add(mode === "turn" ? "turning" : "lifted");
@@ -690,6 +696,7 @@ function enableDrag(f) {
     tilt = 0;
     f.el.style.setProperty("--tilt", "0deg");
     f.el.classList.remove("lifted", "turning", "from-edge");
+    if (!f.el.matches(":hover")) polaroids.get(f.name)?.classList.remove("active");
     f.fromEdge = false;
 
     if (f.pinched) {
@@ -969,7 +976,6 @@ async function intro(onStage, layout) {
   await wait(650);
   carrying = false;
   title.classList.add("floating");
-  document.body.classList.add("line-shown");
   const top = titleRestingPlace(title);
   moveTitle(title, top.x, top.y);
   title.firstElementChild.animate(
@@ -1026,7 +1032,7 @@ async function start() {
   offstage = shuffle(MAWILO_DATA.map((m) => m.file).filter((n) => !onStage.includes(n)));
   if (hasDragged) hint.classList.add("done");
   await intro(onStage, layout);
-  document.body.classList.add("ready");
+  document.body.classList.add("ready", "line-shown");
   startArrivals();
   if (!reducedMotion) startIdleMoves();
 }
