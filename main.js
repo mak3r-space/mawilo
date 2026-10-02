@@ -470,33 +470,136 @@ board.addEventListener("pointerdown", (event) => {
   if (event.target === board) closeCard();
 });
 
-// The title shows alone in the middle first, then moves up into the
-// background, and the starting mawilos waddle in one after another from the
-// nearest side or from below.
+const SIGN_CARRIERS = "light-blue-and-navy-pair-paisley-scarves";
+
+function titleRestingPlace(title) {
+  return { x: (innerWidth - title.offsetWidth) / 2, y: innerHeight * 0.04 };
+}
+
+function moveTitle(title, x, y, scale = 1) {
+  title.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+}
+
+// The sign is carried at this size and grows to full size as it floats up.
+const CARRIED_SCALE = 0.55;
+
+// Two mawilos carry the title in from the left along the bottom edge, stop
+// in the middle, and push it up so it floats to the top. Then the other
+// starting mawilos waddle in one after another from the nearest side or
+// from below.
 async function intro(onStage, layout) {
   const title = document.getElementById("title");
-  const entering = onStage.map((name) => {
-    const target = layout[name];
-    const f = makeFigure(name, { ...target, y: 2 }, "resident");
-    return { f, target };
+  const carriersStay = onStage.includes(SIGN_CARRIERS);
+  const others = onStage.filter((n) => n !== SIGN_CARRIERS);
+  const entering = others.map((name) => ({
+    f: makeFigure(name, { ...layout[name], y: 2 }, "resident"),
+    target: layout[name],
+  }));
+  offstage = offstage.filter((n) => n !== SIGN_CARRIERS);
+  const carriers = makeFigure(
+    SIGN_CARRIERS,
+    { ...(layout[SIGN_CARRIERS] || { r: 0, z: ++topZ }), y: 2 },
+    carriersStay ? "resident" : "leaving",
+  );
+  const carriersTarget = layout[SIGN_CARRIERS];
+  carriers.r = 0;
+
+  addEventListener("resize", () => {
+    if (!title.classList.contains("floating")) return;
+    const top = titleRestingPlace(title);
+    moveTitle(title, top.x, top.y);
   });
+
   if (reducedMotion) {
-    title.classList.add("up");
+    const top = titleRestingPlace(title);
+    moveTitle(title, top.x, top.y);
+    title.classList.add("shown", "floating");
     for (const { f, target } of entering) {
       Object.assign(f, target);
       place(f);
     }
+    if (carriersStay) {
+      Object.assign(carriers, carriersTarget);
+      place(carriers);
+    } else {
+      carriers.el.remove();
+      figures.delete(SIGN_CARRIERS);
+      offstage.push(SIGN_CARRIERS);
+    }
     return;
   }
-  await Promise.all([document.fonts.ready, ...entering.map(({ f }) => f.img.decode().catch(() => {}))]);
+
+  await Promise.all([
+    document.fonts.ready,
+    carriers.img.decode().catch(() => {}),
+    ...entering.map(({ f }) => f.img.decode().catch(() => {})),
+  ]);
+
+  // Carry the sign in. The sign follows the carriers every frame and bobs
+  // in time with their steps.
+  const { w, h } = extent(carriers);
+  const walkY = 1 - h / 2 - 0.03;
+  carriers.x = -w / 2 - title.offsetWidth / innerWidth / 2;
+  carriers.y = walkY;
+  place(carriers);
+  void carriers.el.offsetWidth;
   title.classList.add("shown");
-  await wait(1600);
-  title.classList.add("up");
-  await wait(700);
+  let carrying = true;
+  const follow = (time) => {
+    if (!carrying) return;
+    const box = carriers.el.getBoundingClientRect();
+    const bob = Math.sin((time / 520) * Math.PI) * 3;
+    moveTitle(
+      title,
+      box.left + box.width / 2 - title.offsetWidth / 2,
+      box.top - title.offsetHeight * 0.85 + bob,
+      CARRIED_SCALE,
+    );
+    requestAnimationFrame(follow);
+  };
+  requestAnimationFrame(follow);
+  await moveTo(carriers, 0.5, walkY, "walk", 4200);
+  await wait(300);
+
+  // Dip, then push the sign up so it floats to the top with a little sway.
+  carriers.img.animate(
+    [
+      { transform: "translateY(0) scale(1, 1)" },
+      { transform: "translateY(3%) scale(1.04, 0.92)", offset: 0.45 },
+      { transform: "translateY(-10%) scale(0.97, 1.05)", offset: 0.75 },
+      { transform: "translateY(0) scale(1, 1)" },
+    ],
+    { duration: 900, easing: "ease-in-out" },
+  );
+  await wait(650);
+  carrying = false;
+  title.classList.add("floating");
+  const top = titleRestingPlace(title);
+  moveTitle(title, top.x, top.y);
+  title.firstElementChild.animate(
+    [
+      { transform: "rotate(0deg)" },
+      { transform: "rotate(-2.5deg)" },
+      { transform: "rotate(2deg)" },
+      { transform: "rotate(-1.2deg)" },
+      { transform: "rotate(0.6deg)" },
+      { transform: "rotate(0deg)" },
+    ],
+    { duration: 2800, easing: "ease-in-out" },
+  );
+  await wait(900);
+
+  const carriersDone = carriersStay
+    ? moveTo(carriers, carriersTarget.x, carriersTarget.y, "walk", 2000).then(() => {
+        carriers.r = carriersTarget.r;
+        place(carriers);
+      })
+    : sendOff(carriers, "right");
 
   const order = entering.sort((a, b) => a.target.x - b.target.x);
-  await Promise.all(
-    order.map(async ({ f, target }, i) => {
+  await Promise.all([
+    carriersDone,
+    ...order.map(async ({ f, target }, i) => {
       await wait(i * 260);
       const { w, h } = extent(f);
       const edge = nearestEdge(target);
@@ -506,10 +609,77 @@ async function intro(onStage, layout) {
       void f.el.offsetWidth;
       await moveTo(f, target.x, target.y, "walk", rand(1700, 2300));
     }),
-  );
+  ]);
+}
+
+// Temporary font picker for choosing the title font. It shows only on
+// localhost or with ?dev in the URL, and remembers the choice in this
+// browser.
+const TITLE_FONTS = [
+  ["Fredoka", 600],
+  ["Londrina Sketch", 400],
+  ["Slackey", 400],
+  ["Chewy", 400],
+  ["Galindo", 400],
+  ["Ranchers", 400],
+  ["Allerta Stencil", 400],
+  ["Barrio", 400],
+  ["Kranky", 400],
+  ["Leckerli One", 400],
+  ["Finger Paint", 400],
+  ["Caveat Brush", 400],
+];
+const FONT_KEY = "mawilo-dev-font";
+const isDev = location.hostname === "localhost" || new URLSearchParams(location.search).has("dev");
+
+async function applyTitleFont(name) {
+  const [family, weight] = TITLE_FONTS.find(([f]) => f === name) || TITLE_FONTS[0];
+  const title = document.getElementById("title");
+  title.style.fontFamily = `"${family}", system-ui, sans-serif`;
+  title.style.fontWeight = weight;
+  await document.fonts.load(`${weight} 100px "${family}"`).catch(() => {});
+  if (title.classList.contains("floating")) {
+    const top = titleRestingPlace(title);
+    moveTitle(title, top.x, top.y);
+  }
+}
+
+async function setupFontPicker() {
+  if (!isDev) return;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  const families = TITLE_FONTS.slice(1).map(([f]) => `family=${f.replaceAll(" ", "+")}`);
+  link.href = `https://fonts.googleapis.com/css2?${families.join("&")}&display=swap`;
+  document.head.append(link);
+
+  const picker = document.getElementById("font-picker");
+  for (const [family] of TITLE_FONTS) picker.add(new Option(family, family));
+  let saved = null;
+  try {
+    saved = localStorage.getItem(FONT_KEY);
+  } catch {
+    // Use the default font.
+  }
+  picker.value = saved && TITLE_FONTS.some(([f]) => f === saved) ? saved : TITLE_FONTS[0][0];
+  picker.hidden = false;
+  picker.addEventListener("change", () => {
+    try {
+      localStorage.setItem(FONT_KEY, picker.value);
+    } catch {
+      // The choice only lasts for this visit.
+    }
+    applyTitleFont(picker.value);
+  });
+  // Carry on with the default font if the stylesheet cannot load.
+  await new Promise((resolve) => {
+    link.addEventListener("load", resolve, { once: true });
+    link.addEventListener("error", resolve, { once: true });
+  });
+  await applyTitleFont(picker.value);
 }
 
 async function start() {
+  await setupFontPicker();
   const saved = loadLayout();
   const walkers = MAWILO_DATA.filter((m) => !m.edge).map((m) => m.file);
   let onStage;
@@ -518,7 +688,7 @@ async function start() {
     onStage = Object.keys(saved).filter((n) => byFile.has(n));
     layout = saved;
   } else {
-    onStage = walkers.slice(0, capacity());
+    onStage = [SIGN_CARRIERS, ...walkers.filter((n) => n !== SIGN_CARRIERS).slice(0, capacity() - 1)];
     layout = scatterLayout(onStage);
   }
   offstage = shuffle(MAWILO_DATA.map((m) => m.file).filter((n) => !onStage.includes(n)));
