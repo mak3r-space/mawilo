@@ -103,16 +103,31 @@ function titleRect() {
   return { left: (innerWidth - w) / 2, top: lineHeight, right: (innerWidth + w) / 2, bottom: lineHeight + h };
 }
 
-// The size of a figure on screen, in pixels.
-function figureBox(name, size) {
+// The size of a figure on screen, in pixels, including the extra room it
+// takes up when tilted by `r` degrees.
+function figureBox(name, size, r = 8) {
   const h = figureSize() * (SCALE[name] || 1) * size;
-  return { w: h * (ASPECT[name] || 1), h };
+  const w = h * (ASPECT[name] || 1);
+  const a = (Math.abs(r) * Math.PI) / 180;
+  return { w: w * Math.cos(a) + h * Math.sin(a), h: w * Math.sin(a) + h * Math.cos(a) };
+}
+
+function overlapsTitle(p, box) {
+  const margin = 10;
+  const cx = p.x * innerWidth;
+  const cy = p.y * innerHeight;
+  const t = titleRect();
+  return (
+    cx - box.w / 2 < t.right + margin &&
+    cx + box.w / 2 > t.left - margin &&
+    cy - box.h / 2 < t.bottom + margin &&
+    cy + box.h / 2 > t.top - margin
+  );
 }
 
 // A spot is valid when the figure is fully on screen, below the line, and
 // clear of the title.
 function validSpot(p, box) {
-  const margin = 10;
   const cx = p.x * innerWidth;
   const cy = p.y * innerHeight;
   const left = cx - box.w / 2;
@@ -122,10 +137,7 @@ function validSpot(p, box) {
   if (left < 8 || right > innerWidth - 8 || top < lineHeight + 4 || bottom > innerHeight - 36) {
     return false;
   }
-  const t = titleRect();
-  const overlaps =
-    left < t.right + margin && right > t.left - margin && top < t.bottom + margin && bottom > t.top - margin;
-  return !overlaps;
+  return !overlapsTitle(p, box);
 }
 
 // How many mawilos fit on the board at the start, from about 4 on a phone
@@ -1025,6 +1037,14 @@ async function start() {
   if (saved && Object.keys(saved).length > 0) {
     onStage = Object.keys(saved).filter((n) => byFile.has(n));
     layout = saved;
+    // A saved spot can end up over the title, for example after the screen
+    // changes size. Move those to a free spot so the start stays clear.
+    const placed = onStage.map((n) => layout[n]);
+    for (const name of onStage) {
+      const spot = layout[name];
+      if (!overlapsTitle(spot, figureBox(name, spot.size || 1, spot.r))) continue;
+      layout[name] = { ...spot, ...bestSpot(Math.random, figureBox(name, spot.size || 1, spot.r), placed) };
+    }
   } else {
     onStage = [SIGN_CARRIERS, ...walkers.filter((n) => n !== SIGN_CARRIERS).slice(0, capacity() - 1)];
     layout = scatterLayout(onStage);
