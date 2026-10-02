@@ -354,12 +354,17 @@ function tapMawilo(f) {
   selectTimer = setTimeout(clearSelection, 5000);
 }
 
-// A grey photo invites its mawilo. A colour photo selects it, like tapping
-// the mawilo itself.
+// A grey photo invites its mawilo. A colour photo opens its card and gives
+// the mawilo a small wiggle so it is easy to spot.
 function tapPhoto(name) {
   const f = figures.get(name);
-  if (f?.state === "resident") tapMawilo(f);
-  else if (f?.state !== "leaving") invite(name);
+  if (f?.state === "resident") {
+    clearSelection();
+    if (!reducedMotion) playMove(f, "wiggle");
+    openCard(name);
+  } else if (f?.state !== "leaving") {
+    invite(name);
+  }
 }
 
 // A spot in the middle of the board, below the title.
