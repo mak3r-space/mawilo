@@ -195,7 +195,7 @@ function syncLine() {
     const f = figures.get(name);
     const m = byFile.get(name);
     const onBoard = f?.state === "resident";
-    button.classList.toggle("on-board", onBoard);
+    button.classList.toggle("offstage", !f || f.state === "leaving");
     button.classList.toggle("waiting", f?.state === "waiting");
     button.setAttribute("aria-pressed", String(onBoard));
     button.setAttribute("aria-label", onBoard ? `Send ${m.name} away` : `Invite ${m.name}`);
