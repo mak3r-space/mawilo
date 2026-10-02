@@ -3,13 +3,13 @@
 A quiet board for the mawilos, a family of handmade fabric creatures. Two
 mawilos carry the title in, and the others walk onto the board. Drag them
 around to arrange them the way you like: drag from the middle, turn by the
-edges, and pinch or scroll to resize. The browser remembers the layout, and
-the reset button puts them back where they started.
+edges, and pinch or scroll to resize. Nothing is saved, so a reload starts
+fresh.
 
 A photo of every mawilo hangs on a laundry line at the top. Photos of
 mawilos on the board are in colour, and the others are grey. Tap a grey
-photo to invite that mawilo in. It walks to the middle and the others make
-room. Push a mawilo to the edge of the screen and it walks off.
+photo to invite that mawilo in. It walks to the middle, the others make
+room, and its card opens. Push a mawilo to the edge of the screen and it walks off.
 
 Tap a mawilo or its colour photo to pick it out, and tap again to open its
 card, with its name, story, fabrics and the original photo. The card text

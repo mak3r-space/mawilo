@@ -57,16 +57,6 @@ body {
   transform-origin: 50% 0;
 }
 
-.hint,
-.reset {
-  visibility: hidden;
-}
-
-.ready .hint,
-.ready .reset {
-  visibility: visible;
-}
-
 /* The laundry line along the top holds a photo of every mawilo. Photos of
    mawilos on the board are in colour, and all others are faded. */
 .line {
@@ -324,60 +314,6 @@ body {
   transition:
     top var(--dur) cubic-bezier(0.55, 0, 0.75, 0.3),
     transform 500ms ease;
-}
-
-.hint,
-.reset {
-  position: fixed;
-  bottom: 16px;
-  margin: 0;
-  color: var(--muted);
-  font: inherit;
-  font-size: 15px;
-  letter-spacing: 0.06em;
-  z-index: 1000;
-}
-
-.hint {
-  left: 20px;
-  max-width: calc(100% - 120px);
-  line-height: 1.3;
-  pointer-events: none;
-  transition: transform 600ms ease-in;
-}
-
-/* The hint drops below the screen after the first drag. */
-@media (max-width: 640px), (hover: none) {
-  .hint {
-    display: none;
-  }
-}
-
-.hint.done {
-  transform: translateY(60px);
-}
-
-.reset {
-  right: 14px;
-  bottom: 10px;
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  cursor: pointer;
-  transition: transform 400ms cubic-bezier(0.34, 1.4, 0.64, 1);
-}
-
-.reset:hover {
-  transform: rotate(-60deg);
-}
-
-.reset:hover {
-  color: var(--watermelon);
 }
 
 /* Card */

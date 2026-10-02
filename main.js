@@ -19,7 +19,6 @@ const SCALE = {
   "teal-blue-curly-hair": 1.4,
 };
 
-const STORAGE_KEY = "mawilo-layout-v3";
 const TAP_DISTANCE = 6;
 // Pointer presses inside this fraction of a mawilo's half-width and
 // half-height drag it. Presses outside turn it.
@@ -32,12 +31,10 @@ const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const byFile = new Map(MAWILO_DATA.map((m) => [m.file, m]));
 const board = document.getElementById("board");
-const hint = document.getElementById("hint");
 const figures = new Map();
 let offstage = [];
 let waiting = null;
 let topZ = 1;
-let hasDragged = false;
 
 function clamp(v, min, max) {
   return Math.min(max, Math.max(min, v));
@@ -188,6 +185,8 @@ function fitsAmong(p, box, placed) {
 function scatterLayout(names) {
   const rand = seededRandom(7);
   const aspect = innerWidth / innerHeight;
+  // The middle of the free space below the title.
+  const centre = { x: 0.5, y: (titleRect().bottom / innerHeight + 1) / 2 };
   const placed = [];
   const layout = {};
   names.forEach((name, i) => {
@@ -195,14 +194,18 @@ function scatterLayout(names) {
     const r = (rand() - 0.5) * 16;
     const box = figureBox(name, size, r);
     let best = null;
-    let bestDist = -1;
-    for (let k = 0; k < 300; k++) {
+    let bestScore = -Infinity;
+    for (let k = 0; k < 400; k++) {
       const p = { x: rand(), y: rand() };
       if (!validSpot(p, box) || !fitsAmong(p, box, placed)) continue;
-      const dist = Math.min(1, ...placed.map((q) => Math.hypot((p.x - q.x) * aspect, p.y - q.y)));
-      if (dist > bestDist) {
+      // Room around the spot counts only up to a point. Beyond that, spots
+      // nearer the middle win, so the group stays together.
+      const room = Math.min(0.24, ...placed.map((q) => Math.hypot((p.x - q.x) * aspect, p.y - q.y)));
+      const fromCentre = Math.hypot((p.x - centre.x) * aspect, p.y - centre.y);
+      const score = room - 0.8 * fromCentre;
+      if (score > bestScore) {
         best = p;
-        bestDist = dist;
+        bestScore = score;
       }
     }
     if (!best) return;
@@ -419,31 +422,17 @@ function makeRoom(name, spot) {
     setTimeout(async () => {
       if (f.dragging || f.state !== "resident") return;
       await moveTo(f, target.x / innerWidth, target.y / innerHeight, "walk", 1100);
-      saveLayout();
     }, wait);
   }
 }
 
-// Bring a mawilo in from offstage, or all the way in if it is waiting at
-// the edge. It heads for the middle and the others make room.
+// Bring a mawilo in from offstage. It heads for the middle, the others make
+// room, and its card opens once it has arrived.
 async function invite(name) {
   const f = figures.get(name);
   if (f?.state === "resident" || f?.state === "leaving") return;
   const spot = centreSpot(name);
   if (!byFile.get(name).edge) makeRoom(name, spot);
-  if (f?.state === "waiting") {
-    clearTimeout(f.leaveTimer);
-    waiting = null;
-    f.grabbed = true;
-    f.state = "resident";
-    syncLine();
-    const m = byFile.get(name);
-    const { h } = extent(f);
-    if (m.edge) await moveTo(f, f.x, 1 - h * 0.2, "pop");
-    else await moveTo(f, spot.x, spot.y, "walk", 2200);
-    saveLayout();
-    return;
-  }
 
   offstage = offstage.filter((n) => n !== name);
   const m = byFile.get(name);
@@ -467,32 +456,10 @@ async function invite(name) {
     const px = Math.abs(spot.x - g.x) * innerWidth;
     await moveTo(g, spot.x, spot.y, "walk", clamp((px / 160) * 1000, 1400, 3200));
   }
-  saveLayout();
-}
-
-function loadLayout() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-    if (saved && saved.stage) {
-      hasDragged = Boolean(saved.hasDragged);
-      return saved.stage;
-    }
-  } catch {
-    // Storage can be blocked or hold bad data. Fall back to the default.
-  }
-  return null;
-}
-
-function saveLayout() {
-  const stage = {};
-  for (const [name, f] of figures) {
-    if (f.state === "resident") stage[name] = { x: f.x, y: f.y, r: f.r, z: f.z, size: f.size };
-  }
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ hasDragged, stage }));
-  } catch {
-    // The layout only lasts for this visit.
-  }
+  // Once it has arrived, show its card, unless someone has already picked
+  // it up or sent it away.
+  await wait(250);
+  if (g.state === "resident" && !g.dragging && figures.get(name) === g) openCard(name);
 }
 
 function place(f) {
@@ -582,7 +549,6 @@ async function sendOff(f, edge) {
   figures.delete(f.name);
   offstage.push(f.name);
   syncLine();
-  saveLayout();
 }
 
 function smallWiggle(img) {
@@ -707,7 +673,6 @@ function enableDrag(f) {
   });
 
   // Scroll the wheel or pinch the trackpad over a mawilo to resize it.
-  let saveTimer = 0;
   f.el.addEventListener(
     "wheel",
     (event) => {
@@ -718,8 +683,6 @@ function enableDrag(f) {
       // smaller steps than a mouse wheel.
       const rate = event.ctrlKey ? 0.01 : 0.0008;
       setSize(f, f.size * Math.exp(-event.deltaY * rate));
-      clearTimeout(saveTimer);
-      if (f.state === "resident") saveTimer = setTimeout(saveLayout, 300);
     },
     { passive: false },
   );
@@ -793,16 +756,11 @@ function enableDrag(f) {
 
     if (f.pinched) {
       f.pinched = false;
-      if (f.state === "resident") saveLayout();
       return;
     }
     if (moved < TAP_DISTANCE) {
       tapMawilo(f);
       return;
-    }
-    if (!hasDragged) {
-      hasDragged = true;
-      hint.classList.add("done");
     }
     if (mode === "drag" && (f.x < 0.035 || f.x > 0.965 || f.y > 0.95)) {
       sendOff(f, exitEdge(f));
@@ -815,7 +773,6 @@ function enableDrag(f) {
     }
     f.state = "resident";
     syncLine();
-    saveLayout();
   };
   f.el.addEventListener("pointerup", drop);
   f.el.addEventListener("pointercancel", drop);
@@ -1150,28 +1107,11 @@ async function intro(onStage, layout) {
 async function start() {
   buildLine();
   await Promise.all([loadAspects(), document.fonts.ready]);
-  const saved = loadLayout();
   const walkers = MAWILO_DATA.filter((m) => !m.edge).map((m) => m.file);
-  let onStage;
-  let layout;
-  if (saved && Object.keys(saved).length > 0) {
-    onStage = Object.keys(saved).filter((n) => byFile.has(n));
-    layout = saved;
-    // A saved spot can end up over the title, for example after the screen
-    // changes size. Move those to a free spot so the start stays clear.
-    const placed = onStage.map((n) => layout[n]);
-    for (const name of onStage) {
-      const spot = layout[name];
-      if (!overlapsTitle(spot, figureBox(name, spot.size || 1, spot.r))) continue;
-      layout[name] = { ...spot, ...bestSpot(Math.random, figureBox(name, spot.size || 1, spot.r), placed) };
-    }
-  } else {
-    const wanted = [SIGN_CARRIERS, ...walkers.filter((n) => n !== SIGN_CARRIERS).slice(0, capacity() - 1)];
-    layout = scatterLayout(wanted);
-    onStage = wanted.filter((n) => layout[n]);
-  }
+  const wanted = [SIGN_CARRIERS, ...walkers.filter((n) => n !== SIGN_CARRIERS).slice(0, capacity() - 1)];
+  const layout = scatterLayout(wanted);
+  const onStage = wanted.filter((n) => layout[n]);
   offstage = shuffle(MAWILO_DATA.map((m) => m.file).filter((n) => !onStage.includes(n)));
-  if (hasDragged) hint.classList.add("done");
   await intro(onStage, layout);
   document.body.classList.add("ready", "line-shown");
   // As the line lands, the photos swing one after another from left to
@@ -1183,14 +1123,5 @@ async function start() {
   }
   if (!reducedMotion) startIdleMoves();
 }
-
-document.getElementById("reset").addEventListener("click", () => {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // Nothing was stored.
-  }
-  location.reload();
-});
 
 start();
