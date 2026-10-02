@@ -225,26 +225,40 @@ function layoutLine() {
   const sag = clamp(width * 0.045, 14, 56);
   const rowGap = photo * 1.25 + 22;
   const start = (width - slot * perRow) / 2;
-  let d = "";
+  // Each string is a curve from its left end through a low control point to
+  // its right end. The lower string sags more, hangs lower on the left than
+  // on the right, and is lowest left of centre, so the two do not match.
+  const strings = [];
+  for (let row = 0; row < rows; row++) {
+    const top = 16 + row * rowGap;
+    if (row === 0) {
+      strings.push({ left: top, right: top, cx: width / 2, cy: top + sag * 2 });
+    } else {
+      strings.push({ left: top + sag * 0.9, right: top - sag * 0.5, cx: width * 0.38, cy: top + sag * 4.4 });
+    }
+  }
+  const d = strings.map((s) => `M 0 ${s.left} Q ${s.cx} ${s.cy} ${width} ${s.right}`).join(" ");
+  // Height of a string at x: solve the curve's x for t, then read its y.
+  const stringY = (s, x) => {
+    const a = width - 2 * s.cx;
+    const t = Math.abs(a) < 1e-6 ? x / (2 * s.cx) : (-2 * s.cx + Math.sqrt(4 * s.cx * s.cx + 4 * a * x)) / (2 * a);
+    return (1 - t) ** 2 * s.left + 2 * (1 - t) * t * s.cy + t ** 2 * s.right;
+  };
   MAWILO_DATA.forEach((m, i) => {
     const row = Math.floor(i / perRow);
-    const top = 16 + row * rowGap;
-    // The lower line sags a little more than the upper one.
-    const rowSag = sag * (1 + row * 0.5);
-    if (i % perRow === 0) d += `M 0 ${top} Q ${width / 2} ${top + rowSag * 2} ${width} ${top} `;
     const x = start + slot * ((i % perRow) + 0.5);
-    const t = x / width;
-    const y = (1 - t) ** 2 * top + 2 * (1 - t) * t * (top + rowSag * 2) + t ** 2 * top;
+    const y = stringY(strings[row], x);
     const button = polaroids.get(m.file);
     button.style.left = `${x}px`;
     button.style.top = `${y - 4}px`;
     button.style.width = `${photo}px`;
     button.style.setProperty("--photo", `${photo}px`);
   });
-  lineHeight = 16 + (rows - 1) * rowGap + sag * (1 + (rows - 1) * 0.5) + photo * 1.22 + 12;
+  const lowest = Math.max(...strings.map((s) => Math.max(...[0.25, 0.4, 0.5, 0.6].map((f) => stringY(s, width * f)))));
+  lineHeight = lowest + photo * 1.22 + 12;
   document.documentElement.style.setProperty("--line-h", `${lineHeight}px`);
   lineInner.style.width = `${width}px`;
-  stringPath.setAttribute("d", d.trim());
+  stringPath.setAttribute("d", d);
 }
 
 function swing(button) {
@@ -859,7 +873,7 @@ async function closeCard() {
   if (!card.classList.contains("open")) return;
   card.classList.remove("open");
   returnFocus?.focus?.({ preventScroll: true });
-  await wait(reducedMotion ? 0 : 450);
+  await wait(reducedMotion ? 0 : 550);
   if (!card.classList.contains("open")) card.hidden = true;
 }
 
