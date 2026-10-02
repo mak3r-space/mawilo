@@ -1085,13 +1085,17 @@ async function intro(onStage, layout) {
   );
   await wait(900);
 
-  const carriersDone = carriersStay
-    ? moveTo(carriers, carriersTarget.x, carriersTarget.y, "walk", 2000).then(() => {
-        carriers.r = carriersTarget.r;
-        setSize(carriers, carriersTarget.size || 1);
-        place(carriers);
-      })
-    : sendOff(carriers, "right");
+  let carriersDone;
+  if (carriersStay) {
+    // Shrink and tilt to their place on the board while they walk there,
+    // so they do not snap to it at the end.
+    carriersDone = moveTo(carriers, carriersTarget.x, carriersTarget.y, "walk", 2000);
+    carriers.r = carriersTarget.r;
+    setSize(carriers, carriersTarget.size || 1);
+    place(carriers);
+  } else {
+    carriersDone = sendOff(carriers, "right");
+  }
 
   const order = entering.sort((a, b) => a.target.x - b.target.x);
   await Promise.all([
