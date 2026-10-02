@@ -801,61 +801,7 @@ async function intro(onStage, layout) {
   ]);
 }
 
-// Temporary font picker for choosing the body font to go with the Slackey
-// headings. It shows only on localhost or with ?dev in the URL, and
-// remembers the choice in this browser.
-const BODY_FONTS = [
-  "Fredoka",
-  "Nunito",
-  "Quicksand",
-  "Baloo 2",
-  "Varela Round",
-  "Lexend",
-  "DM Sans",
-  "Outfit",
-];
-const FONT_KEY = "mawilo-dev-body-font";
-const isDev = location.hostname === "localhost" || new URLSearchParams(location.search).has("dev");
-
-function applyBodyFont(family) {
-  document.body.style.fontFamily = `"${family}", system-ui, sans-serif`;
-}
-
-function setupFontPicker() {
-  if (!isDev) return;
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  const families = BODY_FONTS.slice(1).map((f) => {
-    const name = f.replaceAll(" ", "+");
-    // Varela Round has a single weight.
-    return f === "Varela Round" ? `family=${name}` : `family=${name}:wght@400;600`;
-  });
-  link.href = `https://fonts.googleapis.com/css2?${families.join("&")}&display=swap`;
-  document.head.append(link);
-
-  const picker = document.getElementById("font-picker");
-  for (const family of BODY_FONTS) picker.add(new Option(family, family));
-  let saved = null;
-  try {
-    saved = localStorage.getItem(FONT_KEY);
-  } catch {
-    // Use the default font.
-  }
-  picker.value = BODY_FONTS.includes(saved) ? saved : BODY_FONTS[0];
-  applyBodyFont(picker.value);
-  picker.hidden = false;
-  picker.addEventListener("change", () => {
-    try {
-      localStorage.setItem(FONT_KEY, picker.value);
-    } catch {
-      // The choice only lasts for this visit.
-    }
-    applyBodyFont(picker.value);
-  });
-}
-
 async function start() {
-  setupFontPicker();
   const saved = loadLayout();
   const walkers = MAWILO_DATA.filter((m) => !m.edge).map((m) => m.file);
   let onStage;

@@ -20,7 +20,7 @@ body {
   overflow: hidden;
   background: var(--bg);
   color: var(--ink);
-  font-family: "Fredoka", system-ui, sans-serif;
+  font-family: "Outfit", system-ui, sans-serif;
 }
 
 /* The title is carried in like a sign, then floats up to the top. Its
@@ -30,7 +30,7 @@ body {
   left: 0;
   top: 0;
   margin: 0;
-  font-family: "Slackey", "Fredoka", system-ui, sans-serif;
+  font-family: "Slackey", "Outfit", system-ui, sans-serif;
   font-size: clamp(62px, 13.5vw, 176px);
   font-weight: 400;
   line-height: 1;
@@ -305,7 +305,7 @@ body {
 .card-text h2 {
   margin: 4px 40px 10px 0;
   white-space: nowrap;
-  font-family: "Slackey", "Fredoka", system-ui, sans-serif;
+  font-family: "Slackey", "Outfit", system-ui, sans-serif;
   font-size: 26px;
   font-weight: 400;
   line-height: 1.2;
@@ -370,22 +370,6 @@ body {
 
 .card-close:hover {
   color: var(--watermelon);
-}
-
-/* Temporary font picker, shown only on localhost or with ?dev. */
-.font-picker {
-  position: fixed;
-  left: 50%;
-  bottom: 12px;
-  z-index: 3000;
-  transform: translateX(-50%);
-  padding: 4px 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--card);
-  color: var(--ink);
-  font: inherit;
-  font-size: 14px;
 }
 
 @media (max-width: 520px) {
