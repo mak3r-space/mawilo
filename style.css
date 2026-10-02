@@ -82,7 +82,7 @@ body {
   scrollbar-width: none;
   touch-action: pan-x;
   transform: translateY(-110%);
-  transition: transform 1600ms cubic-bezier(0.3, 1.2, 0.5, 1);
+  transition: transform 1600ms cubic-bezier(0.5, 0, 0.3, 1.15);
 }
 
 .line::-webkit-scrollbar {
