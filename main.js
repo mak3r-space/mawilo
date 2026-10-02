@@ -15,14 +15,20 @@ const SCALE = {
   "red-cable-knit-pink-scarf": 0.95,
   "lilac-purple-two-tone": 0.9,
   "light-blue-and-navy-pair-paisley-scarves": 0.85,
+  "blue-anteater-shaggy-mane": 1.5,
+  "teal-blue-curly-hair": 1.4,
 };
 
-const STORAGE_KEY = "mawilo-layout-v2";
+const STORAGE_KEY = "mawilo-layout-v3";
 const TAP_DISTANCE = 6;
+// Pointer presses inside this fraction of a mawilo's half-width and
+// half-height drag it. Presses outside turn it.
+const DRAG_ZONE = 0.55;
+const MAX_TURN = 40;
+const WALK_SPEED = 70;
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const byFile = new Map(MAWILO_DATA.map((m) => [m.file, m]));
-const walkers = MAWILO_DATA.filter((m) => !m.edge).map((m) => m.file);
 const board = document.getElementById("board");
 const hint = document.getElementById("hint");
 const figures = new Map();
@@ -63,31 +69,49 @@ function seededRandom(seed) {
   };
 }
 
+function figureSize() {
+  return Math.min(innerHeight * 0.19, innerWidth * 0.23);
+}
+
 // How many mawilos fit on the board at the start, from about 4 on a phone
 // to about 10 on a large screen.
 function capacity() {
-  const size = Math.min(innerHeight * 0.19, innerWidth * 0.23);
+  const size = figureSize();
   const cols = Math.floor(innerWidth / (size * 1.5));
   const rows = Math.floor((innerHeight * 0.85) / (size * 1.35));
   return clamp(Math.round(cols * rows * 0.6), 4, 12);
 }
 
-// Place mawilos on a loose grid, the same way on every load.
-function gridLayout(names) {
-  const rand = seededRandom(42);
-  const n = names.length;
+// Scatter mawilos loosely over the board, the same way on every load. Each
+// new spot is the best of several random tries, the one furthest from the
+// mawilos already placed.
+function scatterLayout(names) {
+  const rand = seededRandom(7);
   const aspect = innerWidth / innerHeight;
-  const cols = Math.max(2, Math.round(Math.sqrt(n * aspect * 1.3)));
-  const rows = Math.ceil(n / cols);
+  const placed = [];
   const layout = {};
   names.forEach((name, i) => {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
+    let best = null;
+    let bestDist = -1;
+    for (let k = 0; k < 12; k++) {
+      const p = { x: 0.12 + rand() * 0.76, y: 0.14 + rand() * 0.68 };
+      const dist = Math.min(
+        Math.min(p.x, 1 - p.x) * aspect * 1.5,
+        Math.min(p.y, 1 - p.y) * 1.5,
+        ...placed.map((q) => Math.hypot((p.x - q.x) * aspect, p.y - q.y)),
+      );
+      if (dist > bestDist) {
+        best = p;
+        bestDist = dist;
+      }
+    }
+    placed.push(best);
     layout[name] = {
-      x: 0.12 + ((col + 0.5 + (rand() - 0.5) * 0.4) / cols) * 0.76,
-      y: 0.1 + ((row + 0.5 + (rand() - 0.5) * 0.3) / rows) * 0.78,
-      r: (rand() - 0.5) * 12,
+      ...best,
+      r: (rand() - 0.5) * 16,
       z: i + 1,
+      // Vary the sizes a little so the board does not look like a grid.
+      size: 0.82 + rand() * 0.4,
     };
   });
   return layout;
@@ -109,7 +133,7 @@ function loadLayout() {
 function saveLayout() {
   const stage = {};
   for (const [name, f] of figures) {
-    if (f.state === "resident") stage[name] = { x: f.x, y: f.y, r: f.r, z: f.z };
+    if (f.state === "resident") stage[name] = { x: f.x, y: f.y, r: f.r, z: f.z, size: f.size };
   }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ hasDragged, stage }));
@@ -128,7 +152,8 @@ function place(f) {
 function makeFigure(name, pos, state) {
   const el = document.createElement("div");
   el.className = "mawilo";
-  el.style.setProperty("--s", SCALE[name] || 1);
+  const size = pos.size || 1;
+  el.style.setProperty("--s", (SCALE[name] || 1) * size);
   const img = document.createElement("img");
   img.src = `img/${name}.png`;
   img.alt = byFile.get(name).description;
@@ -136,7 +161,7 @@ function makeFigure(name, pos, state) {
   el.append(img);
   board.append(el);
 
-  const f = { name, el, img, state, ...pos };
+  const f = { name, el, img, state, ...pos, size };
   topZ = Math.max(topZ, f.z);
   place(f);
   enableDrag(f);
@@ -144,8 +169,13 @@ function makeFigure(name, pos, state) {
   return f;
 }
 
-// Move a figure with a waddle (sideways) or a pop (up and down), and resolve
-// when it gets there.
+// Width and height of a figure as fractions of the board.
+function extent(f) {
+  return { w: f.el.offsetWidth / innerWidth, h: f.el.offsetHeight / innerHeight };
+}
+
+// Move a figure with a waddle (sideways), a pop (up) or a sink (down), and
+// resolve when it gets there.
 async function moveTo(f, x, y, how) {
   if (reducedMotion) {
     f.x = x;
@@ -155,18 +185,26 @@ async function moveTo(f, x, y, how) {
   }
   let ms;
   if (how === "walk") {
-    ms = Math.max(600, (Math.abs(x - f.x) * innerWidth * 1000) / 120);
-    f.el.style.setProperty("--dur", `${ms}ms`);
+    ms = Math.max(900, (Math.abs(x - f.x) * innerWidth * 1000) / WALK_SPEED);
   } else {
-    ms = how === "pop" ? 700 : 450;
+    ms = how === "pop" ? 900 : 600;
   }
+  f.el.style.setProperty("--dur", `${ms}ms`);
   const cls = { walk: "walking", pop: "popping", sink: "sinking" }[how];
   f.el.classList.add(cls);
   void f.el.offsetWidth;
   f.x = x;
   f.y = y;
   place(f);
-  await wait(ms);
+  if (how === "walk") {
+    // Let the rocking die away over the last part of the walk, then stop.
+    await wait(Math.max(0, ms - 700));
+    f.el.classList.add("slowing");
+    await wait(700);
+    f.el.classList.remove("slowing");
+  } else {
+    await wait(ms);
+  }
   f.el.classList.remove(cls);
 }
 
@@ -179,35 +217,72 @@ async function sendOff(f, edge) {
   f.state = "leaving";
   if (waiting === f) waiting = null;
   clearTimeout(f.leaveTimer);
-  if (edge === "left") await moveTo(f, -0.15, f.y, "walk");
-  else if (edge === "right") await moveTo(f, 1.15, f.y, "walk");
-  else await moveTo(f, f.x, 1.3, "sink");
+  const { w, h } = extent(f);
+  if (edge === "left") await moveTo(f, -w, f.y, "walk");
+  else if (edge === "right") await moveTo(f, 1 + w, f.y, "walk");
+  else await moveTo(f, f.x, 1 + h, "sink");
   f.el.remove();
   figures.delete(f.name);
   offstage.push(f.name);
   saveLayout();
 }
 
-// One mawilo at a time comes to the edge and waits to be dragged in. If
+function smallWiggle(img) {
+  img.animate(
+    [
+      { transform: "rotate(0deg)" },
+      { transform: "rotate(-2deg)" },
+      { transform: "rotate(1.5deg)" },
+      { transform: "rotate(-1deg)" },
+      { transform: "rotate(0deg)" },
+    ],
+    { duration: 1200, easing: "ease-in-out" },
+  );
+}
+
+// One mawilo at a time comes to the edge and waits to be dragged in. It
+// peeks in first, waits a moment, and then comes a little further. If
 // nobody takes it, it leaves the way it came after a while.
-async function arrive() {
+async function arrive(forceEdge) {
   if (waiting || offstage.length === 0) return;
   const name = offstage.shift();
-  const edge = pick(["left", "right", "bottom"]);
-  const y = rand(0.25, 0.75);
-  const x = rand(0.2, 0.8);
-  const start = {
-    left: { x: -0.15, y },
-    right: { x: 1.15, y },
-    bottom: { x, y: 1.3 },
-  }[edge];
-  const f = makeFigure(name, { ...start, r: rand(-5, 5), z: ++topZ }, "waiting");
+  const m = byFile.get(name);
+  const edge = m.edge ? "bottom" : forceEdge || pick(["left", "right", "bottom"]);
+  const f = makeFigure(name, { x: 0.5, y: 2, r: rand(-4, 4), z: ++topZ }, "waiting");
   waiting = f;
+  // The width is only known once the image has loaded.
+  await f.img.decode().catch(() => {});
+  const { w, h } = extent(f);
+  const x = m.edge === "left" ? 0.12 : m.edge === "right" ? 0.86 : rand(0.2, 0.8);
+  const y = rand(0.3, 0.7);
+  const start = {
+    left: { x: -w / 2, y },
+    right: { x: 1 + w / 2, y },
+    bottom: { x, y: 1 + h / 2 },
+  }[edge];
+  f.x = start.x;
+  f.y = start.y;
+  place(f);
   void f.el.offsetWidth;
-  if (edge === "left") await moveTo(f, 0.05, y, "walk");
-  else if (edge === "right") await moveTo(f, 0.95, y, "walk");
-  else await moveTo(f, x, 0.92, "pop");
-  if (f.state !== "waiting") return;
+
+  // The peek shows about a third of the figure, and the wait spot shows
+  // most of it. Photos cut off at the bottom keep the cut below the screen.
+  if (edge === "left") {
+    await moveTo(f, -w / 2 + w * 0.35, y, "walk");
+    await wait(1400);
+    if (f.state === "waiting" && !f.grabbed) await moveTo(f, w * 0.45, y, "walk");
+  } else if (edge === "right") {
+    await moveTo(f, 1 + w / 2 - w * 0.35, y, "walk");
+    await wait(1400);
+    if (f.state === "waiting" && !f.grabbed) await moveTo(f, 1 - w * 0.45, y, "walk");
+  } else {
+    await moveTo(f, x, 1 + h / 2 - h * 0.3, "pop");
+    await wait(1200);
+    const rest = m.edge ? 1 - h * 0.2 : 1 - h * 0.4;
+    if (f.state === "waiting" && !f.grabbed) await moveTo(f, x, rest, "pop");
+    if (name === "blue-anteater-shaggy-mane" && !reducedMotion) smallWiggle(f.img);
+  }
+  if (f.state !== "waiting" || f.grabbed) return;
   f.leaveTimer = setTimeout(() => {
     if (f.state === "waiting" && !f.dragging) sendOff(f, edge);
   }, rand(20000, 30000));
@@ -221,37 +296,77 @@ function startArrivals() {
   setTimeout(loop, rand(4000, 7000));
 }
 
+// Where a pointer is on a figure, as a fraction of its half-width and
+// half-height from its centre. Values above 1 are outside the box.
+function pointerZone(f, event) {
+  const box = f.el.getBoundingClientRect();
+  const cx = box.left + box.width / 2;
+  const cy = box.top + box.height / 2;
+  return Math.max(
+    Math.abs(event.clientX - cx) / (box.width / 2),
+    Math.abs(event.clientY - cy) / (box.height / 2),
+  );
+}
+
 function enableDrag(f) {
+  let mode = null;
   let startX = 0;
   let startY = 0;
   let originX = 0;
   let originY = 0;
+  let originR = 0;
+  let startAngle = 0;
+  let centreX = 0;
+  let centreY = 0;
   let lastX = 0;
   let tilt = 0;
   let moved = 0;
+
+  f.el.addEventListener("pointermove", (event) => {
+    if (f.dragging) return;
+    f.el.classList.toggle("edge-zone", pointerZone(f, event) > DRAG_ZONE);
+  });
+  f.el.addEventListener("pointerleave", () => {
+    if (!f.dragging) f.el.classList.remove("edge-zone");
+  });
 
   f.el.addEventListener("pointerdown", (event) => {
     if (f.state === "leaving") return;
     event.preventDefault();
     f.el.setPointerCapture(event.pointerId);
     f.dragging = true;
+    f.grabbed = true;
     // Stop any walk or pop in progress so the figure follows the pointer.
-    f.el.classList.remove("walking", "popping", "sinking");
+    f.el.classList.remove("walking", "popping", "sinking", "slowing");
     moved = 0;
     f.z = ++topZ;
     f.el.style.zIndex = f.z;
-    f.el.classList.add("lifted");
     startX = lastX = event.clientX;
     startY = event.clientY;
     originX = f.x;
     originY = f.y;
+    originR = f.r;
+    const box = f.el.getBoundingClientRect();
+    centreX = box.left + box.width / 2;
+    centreY = box.top + box.height / 2;
+    startAngle = Math.atan2(event.clientY - centreY, event.clientX - centreX);
+    mode = pointerZone(f, event) > DRAG_ZONE ? "turn" : "drag";
+    f.el.classList.add(mode === "turn" ? "turning" : "lifted");
   });
 
   f.el.addEventListener("pointermove", (event) => {
     if (!f.dragging) return;
     moved = Math.max(moved, Math.hypot(event.clientX - startX, event.clientY - startY));
+    if (mode === "turn") {
+      const angle = Math.atan2(event.clientY - centreY, event.clientX - centreX);
+      let delta = ((angle - startAngle) * 180) / Math.PI;
+      delta = ((delta + 540) % 360) - 180;
+      f.r = clamp(originR + delta, -MAX_TURN, MAX_TURN);
+      place(f);
+      return;
+    }
     f.x = clamp(originX + (event.clientX - startX) / innerWidth, -0.05, 1.05);
-    f.y = clamp(originY + (event.clientY - startY) / innerHeight, 0.03, 1.05);
+    f.y = clamp(originY + (event.clientY - startY) / innerHeight, 0.03, 1.1);
     // Lean a little in the direction of travel, and ease back when still.
     tilt = clamp(tilt * 0.8 + (event.clientX - lastX) * 0.5, -7, 7);
     lastX = event.clientX;
@@ -264,7 +379,7 @@ function enableDrag(f) {
     f.dragging = false;
     tilt = 0;
     f.el.style.setProperty("--tilt", "0deg");
-    f.el.classList.remove("lifted");
+    f.el.classList.remove("lifted", "turning");
 
     if (moved < TAP_DISTANCE) {
       openCard(f.name);
@@ -274,11 +389,12 @@ function enableDrag(f) {
       hasDragged = true;
       hint.classList.add("done");
     }
-    if (f.x < 0.035 || f.x > 0.965 || f.y > 0.95) {
+    if (mode === "drag" && (f.x < 0.035 || f.x > 0.965 || f.y > 0.95)) {
       sendOff(f, nearestEdge(f));
       return;
     }
     if (f.state === "waiting") {
+      if (mode === "turn") return;
       clearTimeout(f.leaveTimer);
       waiting = null;
     }
@@ -295,60 +411,11 @@ function startNudges() {
   const nudge = () => {
     if (hasDragged) return;
     const resting = [...figures.values()].filter((f) => f.state === "resident" && !f.dragging);
-    pick(resting)?.img.animate(
-      [
-        { transform: "rotate(0deg)" },
-        { transform: "rotate(-3deg)" },
-        { transform: "rotate(2.5deg)" },
-        { transform: "rotate(-1.5deg)" },
-        { transform: "rotate(0deg)" },
-      ],
-      { duration: 900, easing: "ease-in-out" },
-    );
-    setTimeout(nudge, rand(5000, 9000));
+    const f = pick(resting);
+    if (f) smallWiggle(f.img);
+    setTimeout(nudge, rand(6000, 10000));
   };
-  setTimeout(nudge, 2500);
-}
-
-function startPeekers() {
-  const peekers = MAWILO_DATA.filter((m) => m.edge).map((m) => {
-    const el = document.createElement("div");
-    el.className = `peeker ${m.edge}`;
-    const img = document.createElement("img");
-    img.src = `img/${m.file}.png`;
-    img.alt = m.description;
-    img.draggable = false;
-    el.append(img);
-    el.addEventListener("click", () => openCard(m.file));
-    document.body.append(el);
-    return { el, img, wiggle: m.file === "blue-anteater-shaggy-mane" };
-  });
-  if (reducedMotion) return;
-
-  const peek = (p) => {
-    p.el.classList.add("up");
-    if (p.wiggle) {
-      setTimeout(() => {
-        p.img.animate(
-          [
-            { transform: "rotate(0deg)" },
-            { transform: "rotate(-5deg)" },
-            { transform: "rotate(4deg)" },
-            { transform: "rotate(-3deg)" },
-            { transform: "rotate(2deg)" },
-            { transform: "rotate(0deg)" },
-          ],
-          { duration: 1000, easing: "ease-in-out" },
-        );
-      }, 500);
-    }
-    setTimeout(() => p.el.classList.remove("up"), rand(4000, 6000));
-  };
-  const loop = () => {
-    peek(pick(peekers));
-    setTimeout(loop, rand(16000, 26000));
-  };
-  setTimeout(loop, rand(10000, 14000));
+  setTimeout(nudge, 3000);
 }
 
 // Card
@@ -403,20 +470,20 @@ board.addEventListener("pointerdown", (event) => {
 
 function start() {
   const saved = loadLayout();
+  const walkers = MAWILO_DATA.filter((m) => !m.edge).map((m) => m.file);
   let onStage;
   let layout;
   if (saved && Object.keys(saved).length > 0) {
-    onStage = Object.keys(saved).filter((n) => byFile.has(n) && !byFile.get(n).edge);
+    onStage = Object.keys(saved).filter((n) => byFile.has(n));
     layout = saved;
   } else {
     onStage = walkers.slice(0, capacity());
-    layout = gridLayout(onStage);
+    layout = scatterLayout(onStage);
   }
   for (const name of onStage) makeFigure(name, layout[name], "resident");
-  offstage = shuffle(walkers.filter((n) => !onStage.includes(n)));
+  offstage = shuffle(MAWILO_DATA.map((m) => m.file).filter((n) => !onStage.includes(n)));
 
   if (hasDragged) hint.classList.add("done");
-  startPeekers();
   startArrivals();
   if (!reducedMotion) startNudges();
 }
