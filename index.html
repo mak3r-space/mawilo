@@ -12,6 +12,10 @@
   <script src="main.js" defer></script>
 </head>
 <body>
+  <svg class="title" id="title" viewBox="0 0 1000 380" role="img" aria-label="Mawilos">
+    <path id="title-arc" d="M 60 340 Q 500 120 940 340" fill="none" />
+    <text text-anchor="middle"><textPath href="#title-arc" startOffset="50%">Mawilos</textPath></text>
+  </svg>
   <main class="board" id="board" aria-label="Mawilos you can drag around"></main>
   <p class="hint" id="hint">drag from the middle, turn by the edges, tap to meet one</p>
   <button class="reset" id="reset" type="button">reset</button>

@@ -175,16 +175,18 @@ function extent(f) {
 }
 
 // Move a figure with a waddle (sideways), a pop (up) or a sink (down), and
-// resolve when it gets there.
-async function moveTo(f, x, y, how) {
+// resolve when it gets there. A waddle takes `ms` when given, and otherwise
+// goes at walking pace.
+async function moveTo(f, x, y, how, ms) {
   if (reducedMotion) {
     f.x = x;
     f.y = y;
     place(f);
     return;
   }
-  let ms;
-  if (how === "walk") {
+  if (ms) {
+    // Use the given duration.
+  } else if (how === "walk") {
     ms = Math.max(900, (Math.abs(x - f.x) * innerWidth * 1000) / WALK_SPEED);
   } else {
     ms = how === "pop" ? 900 : 600;
@@ -468,7 +470,46 @@ board.addEventListener("pointerdown", (event) => {
   if (event.target === board) closeCard();
 });
 
-function start() {
+// The title shows alone in the middle first, then moves up into the
+// background, and the starting mawilos waddle in one after another from the
+// nearest side or from below.
+async function intro(onStage, layout) {
+  const title = document.getElementById("title");
+  const entering = onStage.map((name) => {
+    const target = layout[name];
+    const f = makeFigure(name, { ...target, y: 2 }, "resident");
+    return { f, target };
+  });
+  if (reducedMotion) {
+    title.classList.add("up");
+    for (const { f, target } of entering) {
+      Object.assign(f, target);
+      place(f);
+    }
+    return;
+  }
+  await Promise.all([document.fonts.ready, ...entering.map(({ f }) => f.img.decode().catch(() => {}))]);
+  title.classList.add("shown");
+  await wait(1600);
+  title.classList.add("up");
+  await wait(700);
+
+  const order = entering.sort((a, b) => a.target.x - b.target.x);
+  await Promise.all(
+    order.map(async ({ f, target }, i) => {
+      await wait(i * 260);
+      const { w, h } = extent(f);
+      const edge = nearestEdge(target);
+      f.x = edge === "left" ? -w / 2 : edge === "right" ? 1 + w / 2 : target.x;
+      f.y = edge === "bottom" ? 1 + h / 2 : target.y;
+      place(f);
+      void f.el.offsetWidth;
+      await moveTo(f, target.x, target.y, "walk", rand(1700, 2300));
+    }),
+  );
+}
+
+async function start() {
   const saved = loadLayout();
   const walkers = MAWILO_DATA.filter((m) => !m.edge).map((m) => m.file);
   let onStage;
@@ -480,10 +521,10 @@ function start() {
     onStage = walkers.slice(0, capacity());
     layout = scatterLayout(onStage);
   }
-  for (const name of onStage) makeFigure(name, layout[name], "resident");
   offstage = shuffle(MAWILO_DATA.map((m) => m.file).filter((n) => !onStage.includes(n)));
-
   if (hasDragged) hint.classList.add("done");
+  await intro(onStage, layout);
+  document.body.classList.add("ready");
   startArrivals();
   if (!reducedMotion) startNudges();
 }
