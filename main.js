@@ -1053,6 +1053,13 @@ async function start() {
   if (hasDragged) hint.classList.add("done");
   await intro(onStage, layout);
   document.body.classList.add("ready", "line-shown");
+  // As the line lands, the photos swing one after another from left to
+  // right.
+  if (!reducedMotion) {
+    [...polaroids.values()].forEach((button, i) => {
+      setTimeout(() => swing(button), 900 + i * 45);
+    });
+  }
   startArrivals();
   if (!reducedMotion) startIdleMoves();
 }
