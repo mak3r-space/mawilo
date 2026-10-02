@@ -1,6 +1,6 @@
-// Mawilos on the board stay where they are put. The rest wait offstage and
-// arrive one at a time at the edge of the screen, where they can be dragged
-// in. Pushing a mawilo to the edge sends it offstage again.
+// Mawilos on the board stay where they are put. The rest wait offstage
+// until they are invited in from the line. Pushing a mawilo to the edge
+// sends it offstage again.
 
 const SCALE = {
   "red-grey-striped-knit": 1.1,
@@ -169,17 +169,45 @@ function bestSpot(rand, box, others) {
   return { x: 0.5, y: Math.min(0.85, (t.bottom + box.h / 2 + 12) / innerHeight) };
 }
 
+// True when a figure at `p` keeps a small gap to every placed figure.
+function fitsAmong(p, box, placed) {
+  const gap = 12;
+  const cx = p.x * innerWidth;
+  const cy = p.y * innerHeight;
+  return placed.every(
+    (q) =>
+      Math.abs(cx - q.x * innerWidth) >= (box.w + q.box.w) / 2 + gap ||
+      Math.abs(cy - q.y * innerHeight) >= (box.h + q.box.h) / 2 + gap,
+  );
+}
+
 // Scatter mawilos loosely over the board, the same way on every load, with
-// slightly varied sizes and never over the title.
+// slightly varied sizes. None of them overlaps the title or another one.
+// A mawilo that does not fit stays offstage, so on small screens fewer
+// start on the board.
 function scatterLayout(names) {
   const rand = seededRandom(7);
+  const aspect = innerWidth / innerHeight;
   const placed = [];
   const layout = {};
   names.forEach((name, i) => {
     const size = 0.82 + rand() * 0.4;
-    const spot = bestSpot(rand, figureBox(name, size), placed);
-    placed.push(spot);
-    layout[name] = { ...spot, r: (rand() - 0.5) * 16, z: i + 1, size };
+    const r = (rand() - 0.5) * 16;
+    const box = figureBox(name, size, r);
+    let best = null;
+    let bestDist = -1;
+    for (let k = 0; k < 300; k++) {
+      const p = { x: rand(), y: rand() };
+      if (!validSpot(p, box) || !fitsAmong(p, box, placed)) continue;
+      const dist = Math.min(1, ...placed.map((q) => Math.hypot((p.x - q.x) * aspect, p.y - q.y)));
+      if (dist > bestDist) {
+        best = p;
+        bestDist = dist;
+      }
+    }
+    if (!best) return;
+    placed.push({ ...best, box });
+    layout[name] = { ...best, r, z: i + 1, size };
   });
   return layout;
 }
@@ -282,8 +310,7 @@ function syncLine() {
     const f = figures.get(name);
     const m = byFile.get(name);
     const onBoard = f?.state === "resident";
-    button.classList.toggle("offstage", !f || f.state === "leaving");
-    button.classList.toggle("waiting", f?.state === "waiting");
+    button.classList.toggle("offstage", !f || f.state !== "resident");
     button.setAttribute("aria-pressed", String(onBoard));
     button.setAttribute("aria-label", onBoard ? `Show ${m.name}` : `Invite ${m.name}`);
   }
@@ -569,62 +596,6 @@ function smallWiggle(img) {
     ],
     { duration: 1200, easing: "ease-in-out" },
   );
-}
-
-// One mawilo at a time comes to the edge and waits to be dragged in. It
-// peeks in first, waits a moment, and then comes a little further. If
-// nobody takes it, it leaves the way it came after a while.
-async function arrive(forceEdge) {
-  if (waiting || offstage.length === 0) return;
-  const name = offstage.shift();
-  const m = byFile.get(name);
-  const edge = m.edge ? "bottom" : forceEdge || pick(["left", "right", "bottom"]);
-  const f = makeFigure(name, { x: 0.5, y: 2, r: rand(-4, 4), z: ++topZ }, "waiting");
-  waiting = f;
-  // The width is only known once the image has loaded.
-  await f.img.decode().catch(() => {});
-  const { w, h } = extent(f);
-  const x = m.edge === "left" ? 0.12 : m.edge === "right" ? 0.86 : rand(0.2, 0.8);
-  const y = rand(0.3, 0.7);
-  const start = {
-    left: { x: -w / 2, y },
-    right: { x: 1 + w / 2, y },
-    bottom: { x, y: 1 + h / 2 },
-  }[edge];
-  f.x = start.x;
-  f.y = start.y;
-  place(f);
-  void f.el.offsetWidth;
-
-  // The peek shows about a third of the figure, and the wait spot shows
-  // most of it. Photos cut off at the bottom keep the cut below the screen.
-  if (edge === "left") {
-    await moveTo(f, -w / 2 + w * 0.35, y, "walk");
-    await wait(1400);
-    if (f.state === "waiting" && !f.grabbed) await moveTo(f, w * 0.45, y, "walk");
-  } else if (edge === "right") {
-    await moveTo(f, 1 + w / 2 - w * 0.35, y, "walk");
-    await wait(1400);
-    if (f.state === "waiting" && !f.grabbed) await moveTo(f, 1 - w * 0.45, y, "walk");
-  } else {
-    await moveTo(f, x, 1 + h / 2 - h * 0.3, "pop");
-    await wait(1200);
-    const rest = m.edge ? 1 - h * 0.2 : 1 - h * 0.4;
-    if (f.state === "waiting" && !f.grabbed) await moveTo(f, x, rest, "pop");
-    if (name === "blue-anteater-shaggy-mane" && !reducedMotion) smallWiggle(f.img);
-  }
-  if (f.state !== "waiting" || f.grabbed) return;
-  f.leaveTimer = setTimeout(() => {
-    if (f.state === "waiting" && !f.dragging) sendOff(f, edge);
-  }, rand(20000, 30000));
-}
-
-function startArrivals() {
-  const loop = () => {
-    arrive();
-    setTimeout(loop, rand(9000, 16000));
-  };
-  setTimeout(loop, rand(4000, 7000));
 }
 
 // Where a pointer is on a figure, as a fraction of its half-width and
@@ -942,8 +913,10 @@ let cardFile = null;
 let showingPhoto = false;
 let returnFocus = null;
 
+// The card shows the cut-out on the front of an instant photo and the
+// original photo on the back. The toggle flips it over.
 function showCardPicture() {
-  cardImg.src = showingPhoto ? `img/photo/${cardFile}.jpg` : `img/${cardFile}.png`;
+  document.getElementById("card-flip").classList.toggle("flipped", showingPhoto);
   cardToggle.textContent = showingPhoto ? "see the cut-out" : "see the photo";
 }
 
@@ -951,9 +924,12 @@ function openCard(file) {
   const m = byFile.get(file);
   cardFile = file;
   showingPhoto = false;
+  cardImg.src = `img/${file}.png`;
+  document.getElementById("card-img-back").src = `img/photo/${file}.jpg`;
   showCardPicture();
   cardImg.alt = m.description;
   document.getElementById("card-title").textContent = m.name || m.description;
+  document.getElementById("card-title-back").textContent = m.name || m.description;
   document.getElementById("card-description").textContent = m.name ? m.description : "";
   document.getElementById("card-fabrics").textContent = m.fabrics;
   document.getElementById("card-story").textContent = m.story;
@@ -1155,8 +1131,9 @@ async function start() {
       layout[name] = { ...spot, ...bestSpot(Math.random, figureBox(name, spot.size || 1, spot.r), placed) };
     }
   } else {
-    onStage = [SIGN_CARRIERS, ...walkers.filter((n) => n !== SIGN_CARRIERS).slice(0, capacity() - 1)];
-    layout = scatterLayout(onStage);
+    const wanted = [SIGN_CARRIERS, ...walkers.filter((n) => n !== SIGN_CARRIERS).slice(0, capacity() - 1)];
+    layout = scatterLayout(wanted);
+    onStage = wanted.filter((n) => layout[n]);
   }
   offstage = shuffle(MAWILO_DATA.map((m) => m.file).filter((n) => !onStage.includes(n)));
   if (hasDragged) hint.classList.add("done");
@@ -1169,7 +1146,6 @@ async function start() {
       setTimeout(() => swing(button), 900 + i * 45);
     });
   }
-  startArrivals();
   if (!reducedMotion) startIdleMoves();
 }
 

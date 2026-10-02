@@ -1,23 +1,22 @@
 # Mawilos
 
-A quiet board for the mawilos, a family of handmade fabric creatures. Drag
-them around to arrange them the way you like. The browser remembers the
-layout, and "reset" puts them back on the starting grid.
+A quiet board for the mawilos, a family of handmade fabric creatures. Two
+mawilos carry the title in, and the others walk onto the board. Drag them
+around to arrange them the way you like: drag from the middle, turn by the
+edges, and pinch or scroll to resize. The browser remembers the layout, and
+the reset button puts them back where they started.
 
-The board starts with as many mawilos as fit the screen, from about 4 on a
-phone to about 10 on a large screen. The rest wait offstage. Now and then
-one waddles in from a side or pops up from the bottom and waits at the
-edge. Drag it in to keep it. If nobody does, it leaves again after a while.
-Push a mawilo to the edge of the screen and it waddles off.
+A photo of every mawilo hangs on a laundry line at the top. Photos of
+mawilos on the board are in colour, and the others are grey. Tap a grey
+photo to invite that mawilo in. It walks to the middle and the others make
+room. Push a mawilo to the edge of the screen and it walks off.
 
-Tap a mawilo to open its card, with its fabrics and the original photo.
-The card text lives in `data.js`. Until a mawilo has a `name`, the card
-shows its description, and the card shows the `story` only when it is set.
+Tap a mawilo or its colour photo to pick it out, and tap again to open its
+card, with its name, story, fabrics and the original photo. The card text
+lives in `data.js`.
 
-Until the first drag, one mawilo now and then gives a small wiggle to show
-that they can be moved. Two mawilos whose photos are cut off at the bottom
-peek up from the bottom edge now and then. The blue elephant wiggles as it
-comes up.
+Now and then one mawilo on the board does a small move, like a wiggle or
+a hop, to invite play.
 
 If the browser asks for reduced motion, nothing moves on its own.
 
@@ -36,5 +35,6 @@ Then open http://localhost:18080/.
 
 The images in `img/` are cut out from photos with the macOS Vision framework
 and resized to 480 pixels on the longest side.
+
 The original photos in `img/photo/` are resized to 900 pixels on the
 longest side.
