@@ -156,6 +156,31 @@ body {
   }
 }
 
+/* Marching: a steady climb with short, firm up-and-down steps. */
+.mawilo.marching {
+  transition:
+    top var(--dur) linear,
+    transform 500ms ease;
+}
+
+.mawilo.marching img {
+  --amp: 5;
+  animation: march 240ms ease-in-out infinite alternate;
+}
+
+.mawilo.marching.slowing img {
+  --amp: 0;
+}
+
+@keyframes march {
+  from {
+    transform: translateY(0) rotate(calc(var(--amp) * -0.3deg));
+  }
+  to {
+    transform: translateY(calc(var(--amp) * -1%)) rotate(calc(var(--amp) * 0.3deg));
+  }
+}
+
 /* Popping up from or down to the bottom edge, with a small overshoot. */
 .mawilo.popping {
   transition:
@@ -331,6 +356,7 @@ body {
   .mawilo,
   .mawilo.lifted,
   .mawilo.walking,
+  .mawilo.marching,
   .mawilo.popping,
   .mawilo.sinking,
   .mawilo.turning,
@@ -340,7 +366,8 @@ body {
     transition: none;
   }
 
-  .mawilo.walking img {
+  .mawilo.walking img,
+  .mawilo.marching img {
     animation: none;
   }
 }

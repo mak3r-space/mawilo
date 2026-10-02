@@ -25,6 +25,8 @@ const TAP_DISTANCE = 6;
 // half-height drag it. Presses outside turn it.
 const DRAG_ZONE = 0.55;
 const MAX_TURN = 40;
+const MIN_SIZE = 0.5;
+const MAX_SIZE = 2.2;
 const WALK_SPEED = 70;
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -192,13 +194,13 @@ async function moveTo(f, x, y, how, ms) {
     ms = how === "pop" ? 900 : 600;
   }
   f.el.style.setProperty("--dur", `${ms}ms`);
-  const cls = { walk: "walking", pop: "popping", sink: "sinking" }[how];
+  const cls = { walk: "walking", march: "marching", pop: "popping", sink: "sinking" }[how];
   f.el.classList.add(cls);
   void f.el.offsetWidth;
   f.x = x;
   f.y = y;
   place(f);
-  if (how === "walk") {
+  if (how === "walk" || how === "march") {
     // Let the rocking die away over the last part of the walk, then stop.
     await wait(Math.max(0, ms - 700));
     f.el.classList.add("slowing");
@@ -310,6 +312,60 @@ function pointerZone(f, event) {
   );
 }
 
+function setSize(f, size) {
+  f.size = clamp(size, MIN_SIZE, MAX_SIZE);
+  f.el.style.setProperty("--s", (SCALE[f.name] || 1) * f.size);
+}
+
+// Pinch to resize on touch screens. The first finger on a mawilo grabs it,
+// and a second finger anywhere on the screen turns the grab into a pinch.
+// These listeners run in the capture phase so they see the second finger
+// before the mawilo under it does.
+const touches = new Map();
+let pinch = null;
+
+function touchDistance() {
+  const [a, b] = [...touches.values()];
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+addEventListener(
+  "pointerdown",
+  (event) => {
+    if (event.pointerType !== "touch") return;
+    touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (touches.size !== 2 || pinch) return;
+    const f = [...figures.values()].find((g) => g.dragging && g.touchId !== undefined);
+    if (!f) return;
+    f.pinched = true;
+    pinch = { f, startDist: touchDistance() || 1, startSize: f.size };
+  },
+  true,
+);
+
+addEventListener(
+  "pointermove",
+  (event) => {
+    if (!touches.has(event.pointerId)) return;
+    touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pinch && touches.size >= 2) {
+      setSize(pinch.f, (pinch.startSize * touchDistance()) / pinch.startDist);
+    }
+  },
+  true,
+);
+
+for (const type of ["pointerup", "pointercancel"]) {
+  addEventListener(
+    type,
+    (event) => {
+      touches.delete(event.pointerId);
+      if (touches.size < 2) pinch = null;
+    },
+    true,
+  );
+}
+
 function enableDrag(f) {
   let mode = null;
   let startX = 0;
@@ -332,9 +388,29 @@ function enableDrag(f) {
     if (!f.dragging) f.el.classList.remove("edge-zone");
   });
 
+  // Scroll the wheel or pinch the trackpad over a mawilo to resize it.
+  let saveTimer = 0;
+  f.el.addEventListener(
+    "wheel",
+    (event) => {
+      if (f.state === "leaving") return;
+      event.preventDefault();
+      // Trackpad pinches arrive as wheel events with ctrlKey set, in
+      // smaller steps than a mouse wheel.
+      const rate = event.ctrlKey ? 0.01 : 0.0008;
+      setSize(f, f.size * Math.exp(-event.deltaY * rate));
+      clearTimeout(saveTimer);
+      if (f.state === "resident") saveTimer = setTimeout(saveLayout, 300);
+    },
+    { passive: false },
+  );
+
   f.el.addEventListener("pointerdown", (event) => {
     if (f.state === "leaving") return;
     event.preventDefault();
+    // A second finger on the same mawilo is part of a pinch, not a new grab.
+    if (f.dragging) return;
+    f.touchId = event.pointerType === "touch" ? event.pointerId : undefined;
     f.el.setPointerCapture(event.pointerId);
     f.dragging = true;
     f.grabbed = true;
@@ -357,7 +433,8 @@ function enableDrag(f) {
   });
 
   f.el.addEventListener("pointermove", (event) => {
-    if (!f.dragging) return;
+    if (!f.dragging || f.pinched) return;
+    if (f.touchId !== undefined && event.pointerId !== f.touchId) return;
     moved = Math.max(moved, Math.hypot(event.clientX - startX, event.clientY - startY));
     if (mode === "turn") {
       const angle = Math.atan2(event.clientY - centreY, event.clientX - centreX);
@@ -376,13 +453,19 @@ function enableDrag(f) {
     place(f);
   });
 
-  const drop = () => {
+  const drop = (event) => {
     if (!f.dragging) return;
+    if (f.touchId !== undefined && event.pointerId !== f.touchId) return;
     f.dragging = false;
     tilt = 0;
     f.el.style.setProperty("--tilt", "0deg");
     f.el.classList.remove("lifted", "turning");
 
+    if (f.pinched) {
+      f.pinched = false;
+      if (f.state === "resident") saveLayout();
+      return;
+    }
     if (moved < TAP_DISTANCE) {
       openCard(f.name);
       return;
@@ -535,12 +618,13 @@ async function intro(onStage, layout) {
     ...entering.map(({ f }) => f.img.decode().catch(() => {})),
   ]);
 
-  // Carry the sign in. The sign follows the carriers every frame and bobs
-  // in time with their steps.
-  const { w, h } = extent(carriers);
+  // Carry the sign up from below the bottom edge. The sign follows the
+  // carriers every frame and bobs in time with their steps.
+  const { h } = extent(carriers);
+  const signHeight = (title.offsetHeight * CARRIED_SCALE) / innerHeight;
   const walkY = 1 - h / 2 - 0.03;
-  carriers.x = -w / 2 - title.offsetWidth / innerWidth / 2;
-  carriers.y = walkY;
+  carriers.x = 0.5;
+  carriers.y = 1 + h / 2 + signHeight + 0.02;
   place(carriers);
   void carriers.el.offsetWidth;
   title.classList.add("shown");
@@ -558,7 +642,11 @@ async function intro(onStage, layout) {
     requestAnimationFrame(follow);
   };
   requestAnimationFrame(follow);
-  await moveTo(carriers, 0.5, walkY, "walk", 4200);
+  // Peek: only the top of the sign comes up, and it waits a moment.
+  await moveTo(carriers, 0.5, carriers.y - signHeight * 0.65 - 0.02, "walk", 1600);
+  await wait(1300);
+  // Then a firm march up until the carriers are in view.
+  await moveTo(carriers, 0.5, walkY, "march", 1800);
   await wait(300);
 
   // Dip, then push the sign up so it floats to the top with a little sway.
