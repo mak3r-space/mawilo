@@ -683,9 +683,9 @@ async function intro(onStage, layout) {
   );
   const carriersTarget = layout[SIGN_CARRIERS];
   carriers.r = 0;
-  // Carry the sign at the carriers' normal size, and take on the saved
-  // size once the sign is up.
-  setSize(carriers, 1);
+  // Carry the sign a little bigger than normal, and take on the saved size
+  // once the sign is up.
+  setSize(carriers, 1.15);
 
   addEventListener("resize", () => {
     if (!title.classList.contains("floating")) return;
