@@ -1,233 +1,125 @@
 :root {
   --bg: #f7f1e8;
-  --ground: #ece1cf;
   --ink: #3b2416;
   --muted: #a08c78;
-  --rim: #e8b53c;
+  --size: min(19vh, 23vw);
 }
 
 * {
   box-sizing: border-box;
 }
 
-html {
-  background: var(--bg);
-}
-
+html,
 body {
   margin: 0;
+  height: 100%;
+  overflow: hidden;
   background: var(--bg);
   color: var(--ink);
   font-family: "Fredoka", system-ui, sans-serif;
-  overflow-x: hidden;
 }
 
-/* The intro is taller than the screen so the title stays pinned while its
-   letters rise. */
-.intro {
-  height: 170vh;
+.board {
+  position: fixed;
+  inset: 0;
+  touch-action: none;
 }
 
-.intro-pin {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  display: grid;
-  place-items: center;
+/* A mawilo is placed by its centre point, stored as a fraction of the
+   board in --x and --y. */
+.mawilo {
+  position: absolute;
+  left: calc(var(--x) * 100%);
+  top: calc(var(--y) * 100%);
+  height: calc(var(--size) * var(--s, 1));
+  transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(1);
+  transition:
+    transform 500ms cubic-bezier(0.34, 1.4, 0.64, 1),
+    opacity 900ms ease;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.title {
+.mawilo img {
+  display: block;
+  height: 100%;
+  width: auto;
+  transform-origin: 50% 90%;
+  filter: drop-shadow(0 3px 3px rgb(59 36 22 / 0.18));
+  transition: filter 250ms ease;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.mawilo.lifted {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) rotate(calc(var(--r, 0deg) + var(--tilt, 0deg))) scale(1.06);
+  transition: transform 120ms ease-out;
+}
+
+.mawilo.lifted img {
+  filter: drop-shadow(0 14px 12px rgb(59 36 22 / 0.22));
+}
+
+.mawilo.away {
+  opacity: 0;
+  transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(0.9);
+  pointer-events: none;
+}
+
+/* Peekers are photos cut off at the bottom edge. They rise a little way
+   from below the screen now and then. */
+.peeker {
+  position: fixed;
+  bottom: 0;
+  height: min(30vh, 40vw);
+  transform: translateY(100%);
+  transition: transform 1400ms cubic-bezier(0.25, 1, 0.5, 1);
+  pointer-events: none;
+}
+
+.peeker.up {
+  transform: translateY(30%);
+}
+
+.hint,
+.reset {
+  position: fixed;
+  bottom: 16px;
   margin: 0;
-  display: flex;
-  font-size: clamp(64px, 16vw, 200px);
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: -0.02em;
-  /* Clip only the bottom edge so the letters appear to come up from behind it. */
-  clip-path: inset(-50% -50% 0 -50%);
-  padding-bottom: 0.08em;
-  border-bottom: 2px solid var(--ground);
-}
-
-.letter {
-  display: inline-block;
-  transform-origin: 50% 100%;
+  color: var(--muted);
+  font: inherit;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  transition: opacity 800ms ease;
 }
 
 .hint {
-  position: absolute;
-  bottom: 8vh;
-  margin: 0;
-  color: var(--muted);
-  font-size: 18px;
-  letter-spacing: 0.2em;
+  left: 20px;
+  pointer-events: none;
 }
 
-/* Each scene holds one mawilo that rises from behind the ground line. */
-
-.scene {
-  height: 100vh;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr auto 1fr;
-  align-items: end;
-  padding: 0 6vw;
-  view-timeline-name: --scene;
+.hint.done {
+  opacity: 0;
 }
 
-.window {
-  grid-row: 2;
-  height: min(60vh, 70vw);
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-  clip-path: inset(-50% -50% 0 -50%);
+.reset {
+  right: 20px;
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  cursor: pointer;
 }
 
-.window img {
-  height: 92%;
-  width: auto;
-  max-width: 100%;
-  object-fit: contain;
-  transform-origin: 50% 100%;
-  user-select: none;
+.reset:hover {
+  color: var(--ink);
 }
 
-.ground {
-  grid-row: 3;
-  grid-column: 1 / -1;
-  align-self: start;
-  height: 10vh;
-  background: linear-gradient(var(--ground), transparent);
-  border-top: 2px solid var(--ground);
-}
-
-.name {
-  grid-row: 2;
-  align-self: center;
-  margin: 0;
-  font-size: clamp(22px, 3.2vw, 40px);
-  color: var(--muted);
-}
-
-.left .window {
-  grid-column: 1;
-}
-
-.left .name {
-  grid-column: 2;
-}
-
-.right .window {
-  grid-column: 2;
-}
-
-.right .name {
-  grid-column: 1;
-  grid-row: 2;
-  text-align: right;
-}
-
-@media (max-width: 700px) {
-  .scene {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto auto 1fr;
-  }
-
-  .left .window,
-  .right .window {
-    grid-column: 1;
-    grid-row: 2;
-  }
-
-  .ground {
-    grid-row: 3;
-  }
-
-  .left .name,
-  .right .name {
-    grid-column: 1;
-    grid-row: 4;
-    align-self: start;
-    text-align: center;
-  }
-}
-
-.outro {
-  height: 60vh;
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-  font-size: 20px;
-}
-
-/* Scroll-driven motion. Browsers without scroll timelines show everything
-   in place. */
-
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .letter {
-      animation: rise linear both;
-      animation-timeline: scroll(root);
-      animation-range: calc(var(--i) * 2.5vh) calc(var(--i) * 2.5vh + 30vh);
-    }
-
-    .hint {
-      animation: fade-out linear both;
-      animation-timeline: scroll(root);
-      animation-range: 0 15vh;
-    }
-
-    .window img {
-      animation: rise linear both;
-      animation-timeline: --scene;
-      animation-range: entry 30% contain 30%;
-    }
-
-    .name {
-      animation: slide-in linear both;
-      animation-timeline: --scene;
-      animation-range: entry 70% contain 35%;
-    }
-  }
-}
-
-/* The figure comes up dark with a warm rim of light on top, overshoots a
-   little, and settles with a small squash. */
-@keyframes rise {
-  0% {
-    transform: translateY(105%);
-    filter: brightness(0.35) drop-shadow(0 -3px 0 var(--rim));
-  }
-  60% {
-    transform: translateY(-4%);
-    filter: brightness(0.85) drop-shadow(0 -2px 0 var(--rim));
-  }
-  75% {
-    transform: translateY(0) scale(1.05, 0.95);
-  }
-  88% {
-    transform: translateY(0) scale(0.98, 1.02);
-  }
-  100% {
-    transform: translateY(0) scale(1, 1);
-    filter: brightness(1) drop-shadow(0 0 0 transparent);
-  }
-}
-
-@keyframes slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fade-out {
-  to {
-    opacity: 0;
+@media (prefers-reduced-motion: reduce) {
+  .mawilo,
+  .mawilo.lifted,
+  .peeker {
+    transition: none;
   }
 }

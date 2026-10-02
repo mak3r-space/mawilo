@@ -1,12 +1,14 @@
-# Mawilo Theatre
+# Mawilos
 
-A small stage for the mawilos, a family of handmade fabric creatures. The
-mawilos waddle across the stage in three rows, and the rows shift with the
-pointer to give a parallax effect. Click a mawilo to make it hop. Hover over
-a mawilo to make it stop and wait. Two mawilos whose photos are cut off at
-the edge peek up from the bottom of the stage now and then.
+A quiet board for the mawilos, a family of handmade fabric creatures. Drag
+them around to arrange them the way you like. The browser remembers the
+layout, and "reset" puts them back on the starting grid.
 
-If the browser asks for reduced motion, the mawilos stand still.
+Until the first drag, one mawilo now and then gives a small wiggle to show
+that they can be moved. Only a few come and go: one mawilo fades in and out
+until you move it, and two peek up from the bottom edge of the screen.
+
+If the browser asks for reduced motion, nothing moves on its own.
 
 ## Run it
 
