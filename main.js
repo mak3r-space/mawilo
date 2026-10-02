@@ -312,6 +312,13 @@ function pointerZone(f, event) {
   );
 }
 
+// True when the whole figure is inside the screen. Figures that are partly
+// off screen can only be dragged, not turned or resized.
+function fullyOnScreen(f) {
+  const box = f.el.getBoundingClientRect();
+  return box.left >= 0 && box.top >= 0 && box.right <= innerWidth && box.bottom <= innerHeight;
+}
+
 function setSize(f, size) {
   f.size = clamp(size, MIN_SIZE, MAX_SIZE);
   f.el.style.setProperty("--s", (SCALE[f.name] || 1) * f.size);
@@ -336,7 +343,7 @@ addEventListener(
     touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (touches.size !== 2 || pinch) return;
     const f = [...figures.values()].find((g) => g.dragging && g.touchId !== undefined);
-    if (!f) return;
+    if (!f || f.fromEdge) return;
     f.pinched = true;
     pinch = { f, startDist: touchDistance() || 1, startSize: f.size };
   },
@@ -382,10 +389,20 @@ function enableDrag(f) {
 
   f.el.addEventListener("pointermove", (event) => {
     if (f.dragging) return;
-    f.el.classList.toggle("edge-zone", pointerZone(f, event) > DRAG_ZONE);
+    f.el.classList.toggle("edge-zone", fullyOnScreen(f) && pointerZone(f, event) > DRAG_ZONE);
   });
   f.el.addEventListener("pointerleave", () => {
     if (!f.dragging) f.el.classList.remove("edge-zone");
+  });
+
+  // Greet a mouse that comes over, at most once every 1.5 seconds.
+  let lastGreeting = 0;
+  f.el.addEventListener("pointerenter", (event) => {
+    if (reducedMotion || event.pointerType !== "mouse" || f.dragging) return;
+    if (f.state !== "resident" && f.state !== "waiting") return;
+    if (performance.now() - lastGreeting < 1500) return;
+    lastGreeting = performance.now();
+    playMove(f, pick(["wiggle", "hop"]));
   });
 
   // Scroll the wheel or pinch the trackpad over a mawilo to resize it.
@@ -395,6 +412,7 @@ function enableDrag(f) {
     (event) => {
       if (f.state === "leaving") return;
       event.preventDefault();
+      if (!fullyOnScreen(f)) return;
       // Trackpad pinches arrive as wheel events with ctrlKey set, in
       // smaller steps than a mouse wheel.
       const rate = event.ctrlKey ? 0.01 : 0.0008;
@@ -428,8 +446,10 @@ function enableDrag(f) {
     centreX = box.left + box.width / 2;
     centreY = box.top + box.height / 2;
     startAngle = Math.atan2(event.clientY - centreY, event.clientX - centreX);
-    mode = pointerZone(f, event) > DRAG_ZONE ? "turn" : "drag";
+    f.fromEdge = !fullyOnScreen(f);
+    mode = !f.fromEdge && pointerZone(f, event) > DRAG_ZONE ? "turn" : "drag";
     f.el.classList.add(mode === "turn" ? "turning" : "lifted");
+    f.el.classList.toggle("from-edge", f.fromEdge);
   });
 
   f.el.addEventListener("pointermove", (event) => {
@@ -447,6 +467,11 @@ function enableDrag(f) {
     f.x = clamp(originX + (event.clientX - startX) / innerWidth, -0.05, 1.05);
     f.y = clamp(originY + (event.clientY - startY) / innerHeight, 0.03, 1.1);
     // Lean a little in the direction of travel, and ease back when still.
+    // A figure pulled in from the edge stays upright.
+    if (f.fromEdge) {
+      place(f);
+      return;
+    }
     tilt = clamp(tilt * 0.8 + (event.clientX - lastX) * 0.5, -7, 7);
     lastX = event.clientX;
     f.el.style.setProperty("--tilt", `${tilt}deg`);
@@ -459,7 +484,8 @@ function enableDrag(f) {
     f.dragging = false;
     tilt = 0;
     f.el.style.setProperty("--tilt", "0deg");
-    f.el.classList.remove("lifted", "turning");
+    f.el.classList.remove("lifted", "turning", "from-edge");
+    f.fromEdge = false;
 
     if (f.pinched) {
       f.pinched = false;
@@ -490,17 +516,87 @@ function enableDrag(f) {
   f.el.addEventListener("pointercancel", drop);
 }
 
-// Until the first drag, one mawilo now and then gives a small wiggle to
-// show that they can be moved.
-function startNudges() {
-  const nudge = () => {
-    if (hasDragged) return;
-    const resting = [...figures.values()].filter((f) => f.state === "resident" && !f.dragging);
-    const f = pick(resting);
-    if (f) smallWiggle(f.img);
-    setTimeout(nudge, rand(6000, 10000));
+// Small moves that invite someone to play. Each one runs on the image, so
+// it does not disturb the figure's place on the board.
+const IDLE_MOVES = {
+  wiggle: [
+    [
+      { transform: "rotate(0deg)" },
+      { transform: "rotate(-1deg)" },
+      { transform: "rotate(0.8deg)" },
+      { transform: "rotate(-0.5deg)" },
+      { transform: "rotate(0deg)" },
+    ],
+    { duration: 2600, easing: "ease-in-out" },
+  ],
+  breathe: [
+    [
+      { transform: "scale(1, 1)" },
+      { transform: "scale(1.01, 1.02)" },
+      { transform: "scale(1, 1)" },
+    ],
+    { duration: 3400, easing: "ease-in-out" },
+  ],
+  hop: [
+    [
+      { transform: "translateY(0) scale(1, 1)" },
+      { transform: "translateY(0) scale(1.015, 0.98)", offset: 0.2 },
+      { transform: "translateY(-3%) scale(0.99, 1.015)", offset: 0.5 },
+      { transform: "translateY(0) scale(1.01, 0.99)", offset: 0.8 },
+      { transform: "translateY(0) scale(1, 1)" },
+    ],
+    { duration: 1300, easing: "ease-in-out" },
+  ],
+  lean: [
+    [
+      { transform: "rotate(0deg)" },
+      { transform: "rotate(var(--lean))", offset: 0.3 },
+      { transform: "rotate(var(--lean))", offset: 0.7 },
+      { transform: "rotate(0deg)" },
+    ],
+    { duration: 3800, easing: "ease-in-out" },
+  ],
+  shiver: [
+    [
+      { transform: "translateX(0)" },
+      { transform: "translateX(-0.4%)" },
+      { transform: "translateX(0.4%)" },
+      { transform: "translateX(-0.3%)" },
+      { transform: "translateX(0.3%)" },
+      { transform: "translateX(-0.15%)" },
+      { transform: "translateX(0)" },
+    ],
+    { duration: 1100, easing: "ease-in-out" },
+  ],
+};
+
+function playMove(f, name) {
+  if (f.dragging || f.moving) return;
+  const [frames, options] = IDLE_MOVES[name];
+  if (name === "lean") f.img.style.setProperty("--lean", `${pick([-2.5, 2.5])}deg`);
+  f.moving = true;
+  const animation = f.img.animate(frames, options);
+  animation.onfinish = animation.oncancel = () => {
+    f.moving = false;
   };
-  setTimeout(nudge, 3000);
+}
+
+// Now and then, one mawilo on the board does a small move. The same one
+// never moves twice in a row.
+function startIdleMoves() {
+  let last = null;
+  const tick = () => {
+    const resting = [...figures.values()].filter(
+      (f) => f.state === "resident" && !f.dragging && f !== last,
+    );
+    const f = pick(resting);
+    if (f) {
+      playMove(f, pick(Object.keys(IDLE_MOVES)));
+      last = f;
+    }
+    setTimeout(tick, rand(4000, 8000));
+  };
+  setTimeout(tick, 3000);
 }
 
 // Card
@@ -565,7 +661,7 @@ function moveTitle(title, x, y, scale = 1) {
 }
 
 // The sign is carried at this size and grows to full size as it floats up.
-const CARRIED_SCALE = 0.55;
+const CARRIED_SCALE = 0.9;
 
 // Two mawilos carry the title in from the left along the bottom edge, stop
 // in the middle, and push it up so it floats to the top. Then the other
@@ -587,6 +683,9 @@ async function intro(onStage, layout) {
   );
   const carriersTarget = layout[SIGN_CARRIERS];
   carriers.r = 0;
+  // Carry the sign at the carriers' normal size, and take on the saved
+  // size once the sign is up.
+  setSize(carriers, 1);
 
   addEventListener("resize", () => {
     if (!title.classList.contains("floating")) return;
@@ -681,6 +780,7 @@ async function intro(onStage, layout) {
   const carriersDone = carriersStay
     ? moveTo(carriers, carriersTarget.x, carriersTarget.y, "walk", 2000).then(() => {
         carriers.r = carriersTarget.r;
+        setSize(carriers, carriersTarget.size || 1);
         place(carriers);
       })
     : sendOff(carriers, "right");
@@ -772,7 +872,7 @@ async function start() {
   await intro(onStage, layout);
   document.body.classList.add("ready");
   startArrivals();
-  if (!reducedMotion) startNudges();
+  if (!reducedMotion) startIdleMoves();
 }
 
 document.getElementById("reset").addEventListener("click", () => {

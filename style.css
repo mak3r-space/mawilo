@@ -31,7 +31,7 @@ body {
   top: 0;
   margin: 0;
   font-family: "Slackey", "Fredoka", system-ui, sans-serif;
-  font-size: clamp(56px, 12vw, 160px);
+  font-size: clamp(62px, 13.5vw, 176px);
   font-weight: 400;
   line-height: 1;
   letter-spacing: 0.01em;
@@ -95,6 +95,17 @@ body {
   -webkit-user-select: none;
 }
 
+/* Lift a little under the mouse. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .mawilo:hover:not(.lifted, .turning, .walking, .marching, .popping, .sinking) {
+    transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(1.025);
+  }
+
+  .mawilo:hover:not(.lifted) img {
+    filter: drop-shadow(0 5px 5px rgb(59 36 22 / 0.2));
+  }
+}
+
 .mawilo.edge-zone {
   cursor: var(--turn-cursor), alias;
 }
@@ -116,6 +127,11 @@ body {
   cursor: grabbing;
   transform: translate(-50%, -50%) rotate(calc(var(--r, 0deg) + var(--tilt, 0deg))) scale(1.06);
   transition: transform 120ms ease-out;
+}
+
+/* A figure pulled in from the edge keeps its size and angle. */
+.mawilo.lifted.from-edge {
+  transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(1);
 }
 
 .mawilo.lifted img {
