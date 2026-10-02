@@ -1,7 +1,9 @@
 :root {
   --bg: #f7f1e8;
+  --card: #fffaf3;
   --ink: #3b2416;
   --muted: #a08c78;
+  --line: #e6d9c6;
   --size: min(19vh, 23vw);
 }
 
@@ -33,9 +35,7 @@ body {
   top: calc(var(--y) * 100%);
   height: calc(var(--size) * var(--s, 1));
   transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(1);
-  transition:
-    transform 500ms cubic-bezier(0.34, 1.4, 0.64, 1),
-    opacity 900ms ease;
+  transition: transform 500ms cubic-bezier(0.34, 1.4, 0.64, 1);
   cursor: grab;
   user-select: none;
   -webkit-user-select: none;
@@ -62,25 +62,73 @@ body {
   filter: drop-shadow(0 14px 12px rgb(59 36 22 / 0.22));
 }
 
-.mawilo.away {
-  opacity: 0;
-  transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(0.9);
-  pointer-events: none;
+/* Walking in or out from a side: the figure slides at a steady pace while
+   its image rocks from foot to foot. */
+.mawilo.walking {
+  transition:
+    left var(--dur) linear,
+    top var(--dur) linear,
+    transform 500ms ease;
 }
 
-/* Peekers are photos cut off at the bottom edge. They rise a little way
+.mawilo.walking img {
+  animation: waddle 340ms ease-in-out infinite alternate;
+}
+
+@keyframes waddle {
+  from {
+    transform: rotate(-6deg) translateY(0);
+  }
+  to {
+    transform: rotate(6deg) translateY(-4%);
+  }
+}
+
+/* Popping up from or down to the bottom edge, with a small overshoot. */
+.mawilo.popping {
+  transition:
+    top 700ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 500ms ease;
+}
+
+.mawilo.sinking {
+  transition:
+    top 450ms cubic-bezier(0.55, 0, 0.75, 0.3),
+    transform 500ms ease;
+}
+
+/* Peekers are photos cut off at the bottom edge. They pop up a little way
    from below the screen now and then. */
 .peeker {
   position: fixed;
   bottom: 0;
   height: min(30vh, 40vw);
   transform: translateY(100%);
-  transition: transform 1400ms cubic-bezier(0.25, 1, 0.5, 1);
+  transition: transform 450ms cubic-bezier(0.55, 0, 0.75, 0.3);
+  cursor: pointer;
+  user-select: none;
+}
+
+.peeker img {
+  display: block;
+  height: 100%;
+  width: auto;
+  transform-origin: 50% 100%;
   pointer-events: none;
+  -webkit-user-drag: none;
 }
 
 .peeker.up {
   transform: translateY(30%);
+  transition: transform 800ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.peeker.left {
+  left: 6%;
+}
+
+.peeker.right {
+  right: 4%;
 }
 
 .hint,
@@ -91,17 +139,19 @@ body {
   color: var(--muted);
   font: inherit;
   font-size: 15px;
-  letter-spacing: 0.08em;
-  transition: opacity 800ms ease;
+  letter-spacing: 0.06em;
+  z-index: 1000;
 }
 
 .hint {
   left: 20px;
   pointer-events: none;
+  transition: transform 600ms ease-in;
 }
 
+/* The hint drops below the screen after the first drag. */
 .hint.done {
-  opacity: 0;
+  transform: translateY(60px);
 }
 
 .reset {
@@ -116,10 +166,139 @@ body {
   color: var(--ink);
 }
 
+/* Card */
+
+.card {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 2000;
+  width: min(620px, calc(100% - 32px));
+  display: grid;
+  grid-template-columns: 42% 1fr;
+  gap: 20px;
+  padding: 24px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgb(59 36 22 / 0.18);
+  transform: translate(-50%, calc(100% + 40px));
+  transition: transform 450ms cubic-bezier(0.55, 0, 0.75, 0.3);
+}
+
+.card[hidden] {
+  display: grid;
+  visibility: hidden;
+}
+
+.card.open {
+  transform: translate(-50%, 0);
+  transition: transform 650ms cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+.card-picture {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+}
+
+.card-picture img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.card-text h2 {
+  margin: 4px 0 12px;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.card-fabrics {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.card-story {
+  margin: 0 0 16px;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.card-story:empty {
+  display: none;
+}
+
+.card-toggle {
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.card-toggle:hover {
+  background: var(--bg);
+}
+
+.card-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.card-close:hover {
+  color: var(--ink);
+}
+
+@media (max-width: 520px) {
+  .card {
+    grid-template-columns: 1fr;
+    bottom: 16px;
+  }
+
+  .card-picture {
+    aspect-ratio: auto;
+    height: 30vh;
+    display: block;
+  }
+
+  .card-picture img {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mawilo,
   .mawilo.lifted,
-  .peeker {
+  .mawilo.walking,
+  .mawilo.popping,
+  .mawilo.sinking,
+  .peeker,
+  .peeker.up,
+  .card,
+  .card.open {
     transition: none;
+  }
+
+  .mawilo.walking img {
+    animation: none;
   }
 }

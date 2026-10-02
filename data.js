@@ -1,0 +1,151 @@
+// One entry per mawilo. `file` is the image name in img/ and img/photo/.
+// `name` and `story` are empty until Julia fills them in; the card shows
+// the description when there is no name and hides the story when it is
+// empty. The fabrics are guesses from the photos.
+//
+// `edge` marks photos that are cut off at the bottom. Those mawilos only
+// peek up from the bottom of the screen and are never dragged around.
+const MAWILO_DATA = [
+  {
+    file: "pink-heart-on-forehead",
+    name: "",
+    description: "Pink, with a heart on its forehead",
+    fabrics: "Pink fleece, red heart bead",
+    story: "",
+  },
+  {
+    file: "teal-black-lace-pants-jewel-eyes",
+    name: "",
+    description: "Teal, in black lace pants",
+    fabrics: "Teal fleece, black lace, purple jewel eyes",
+    story: "",
+  },
+  {
+    file: "green-tartan-pants",
+    name: "",
+    description: "Green, in tartan pants",
+    fabrics: "Green fleece, tartan fleece",
+    story: "",
+  },
+  {
+    file: "cream-purple-top-ruffle",
+    name: "",
+    description: "Cream, in a purple top with a ruffle",
+    fabrics: "Cream fleece, purple corduroy, navy satin",
+    story: "",
+  },
+  {
+    file: "red-grey-striped-knit",
+    name: "",
+    description: "Red and grey stripes",
+    fabrics: "Striped knit, red velour",
+    story: "",
+  },
+  {
+    file: "pink-floral-dress-fringe",
+    name: "",
+    description: "Pink, in a floral dress",
+    fabrics: "Pink fleece, red floral fleece with fringe",
+    story: "",
+  },
+  {
+    file: "navy-head-red-knit-body-fringe-hair",
+    name: "",
+    description: "Navy head, red knit body",
+    fabrics: "Navy fleece, red ribbed knit, red fleece fringe",
+    story: "",
+  },
+  {
+    file: "green-lilac-striped-skirt",
+    name: "",
+    description: "Green, in a lilac striped skirt",
+    fabrics: "Green fleece, lilac striped cotton",
+    story: "",
+  },
+  {
+    file: "lilac-purple-two-tone",
+    name: "",
+    description: "Lilac and purple",
+    fabrics: "Lilac and pale pink fleece, purple knit, dark corduroy",
+    story: "",
+  },
+  {
+    file: "blue-brown-ears-brown-scarf",
+    name: "",
+    description: "Blue, with brown ears and a scarf",
+    fabrics: "Periwinkle fleece, brown fleece",
+    story: "",
+  },
+  {
+    file: "pink-red-floral-striped-patchwork",
+    name: "",
+    description: "Pink and red patchwork",
+    fabrics: "Red floral fleece, pink fleece, striped knit",
+    story: "",
+  },
+  {
+    file: "teal-head-red-shirt-green-legs",
+    name: "",
+    description: "Teal head, red shirt, green legs",
+    fabrics: "Teal fleece, red fleece, embossed green fleece, lace trim",
+    story: "",
+  },
+  {
+    file: "red-cable-knit-pink-scarf",
+    name: "",
+    description: "Red cable knit, with a pink scarf",
+    fabrics: "Red cable knit, pink satin",
+    story: "",
+  },
+  {
+    file: "pink-floral-brown-pink-fringe-hair",
+    name: "",
+    description: "Pink, with fringe hair",
+    fabrics: "Embossed pink fleece, brown and pink fleece fringe",
+    story: "",
+  },
+  {
+    file: "green-body-red-legs-yellow-horn",
+    name: "",
+    description: "Green, with red legs and a yellow horn",
+    fabrics: "Green fleece, red fleece, yellow fleece",
+    story: "",
+  },
+  {
+    file: "pink-red-patchwork-red-green-legs",
+    name: "",
+    description: "Pink and red, with odd legs",
+    fabrics: "Pink fleece, red patterned fleece, red knit, green fleece",
+    story: "",
+  },
+  {
+    file: "light-blue-and-navy-pair-paisley-scarves",
+    name: "",
+    description: "A pair in paisley scarves",
+    fabrics: "Light blue fleece, navy fleece, paisley silk",
+    story: "",
+  },
+  {
+    file: "tan-white-button-row",
+    name: "",
+    description: "Tan, with a row of buttons",
+    fabrics: "Tan fleece, white buttons",
+    story: "",
+  },
+  {
+    file: "blue-anteater-shaggy-mane",
+    name: "",
+    description: "The blue elephant with a shaggy mane",
+    fabrics: "Blue fleece, blue and brown fleece fringe, pearl eye",
+    story: "",
+    edge: "right",
+  },
+  {
+    file: "teal-blue-curly-hair",
+    name: "",
+    description: "Teal, with curly blue hair",
+    fabrics: "Teal fleece, blue curly yarn",
+    story: "",
+    edge: "left",
+  },
+];
