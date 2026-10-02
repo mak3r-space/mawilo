@@ -913,11 +913,46 @@ let cardFile = null;
 let showingPhoto = false;
 let returnFocus = null;
 
-// The card shows the cut-out on the front of an instant photo and the
-// original photo on the back. The toggle flips it over.
-function showCardPicture() {
-  document.getElementById("card-flip").classList.toggle("flipped", showingPhoto);
+// The card shows two instant photos in a stack: the cut-out and the
+// original photo. The toggle shuffles them: the top one slides out to the
+// side and tucks in behind, and the other one comes forward.
+const TOP_POSE = "rotate(-2.5deg)";
+const BACK_POSE = "translate(14px, -8px) rotate(5deg)";
+
+function showCardPicture(animate = false) {
+  const front = document.querySelector(".card-photo.front");
+  const back = document.querySelector(".card-photo.back");
+  const [top, under] = showingPhoto ? [back, front] : [front, back];
   cardToggle.textContent = showingPhoto ? "see the cut-out" : "see the photo";
+  front.setAttribute("aria-hidden", String(showingPhoto));
+  back.setAttribute("aria-hidden", String(!showingPhoto));
+  if (!animate || reducedMotion || top.classList.contains("on-top")) {
+    top.classList.add("on-top");
+    under.classList.remove("on-top");
+    return;
+  }
+  const options = { duration: 700, easing: "ease-in-out" };
+  under.animate(
+    [
+      { transform: TOP_POSE },
+      { transform: "translate(-58%, 4px) rotate(-9deg)", offset: 0.45 },
+      { transform: BACK_POSE },
+    ],
+    options,
+  );
+  top.animate(
+    [
+      { transform: BACK_POSE },
+      { transform: "translate(16%, -4px) rotate(6deg)", offset: 0.45 },
+      { transform: TOP_POSE },
+    ],
+    options,
+  );
+  // Swap which photo is on top halfway, while they are apart.
+  setTimeout(() => {
+    top.classList.add("on-top");
+    under.classList.remove("on-top");
+  }, 315);
 }
 
 function openCard(file) {
@@ -950,7 +985,7 @@ async function closeCard() {
 
 cardToggle.addEventListener("click", () => {
   showingPhoto = !showingPhoto;
-  showCardPicture();
+  showCardPicture(true);
 });
 document.getElementById("card-close").addEventListener("click", closeCard);
 addEventListener("keydown", (event) => {

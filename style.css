@@ -414,38 +414,36 @@ body {
   transition: transform 800ms cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-/* The picture is a big instant photo, tilted a little, with the name
-   written on its wide bottom edge. The original photo is on its back. */
+/* The picture is a stack of two big instant photos with the name written
+   on their wide bottom edge: the cut-out, and behind it the original photo,
+   tilted the other way so it peeks out. */
 .card-picture {
-  perspective: 1200px;
-  padding: 6px 4px 10px;
+  padding: 10px 16px 14px 6px;
 }
 
 .card-flip {
   position: relative;
-  transform: rotate(-2.5deg);
-  transform-style: preserve-3d;
-  transition: transform 700ms cubic-bezier(0.65, 0, 0.35, 1);
-}
-
-.card-flip.flipped {
-  transform: rotate(2deg) rotateY(180deg);
 }
 
 .card-photo {
+  position: relative;
   margin: 0;
   padding: 12px 12px 0;
   background: #fff;
   box-shadow:
     0 1px 2px rgb(59 36 22 / 0.12),
     0 10px 24px rgb(59 36 22 / 0.18);
-  backface-visibility: hidden;
+  transform: translate(14px, -8px) rotate(5deg);
 }
 
 .card-photo.back {
   position: absolute;
   inset: 0;
-  transform: rotateY(180deg);
+}
+
+.card-photo.on-top {
+  z-index: 1;
+  transform: rotate(-2.5deg);
 }
 
 .card-photo img {
@@ -570,7 +568,6 @@ body {
   .mawilo.turning,
   .card,
   .card.open,
-  .card-flip,
   .title.floating,
   .line {
     transition: none;
