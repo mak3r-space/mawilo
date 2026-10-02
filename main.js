@@ -612,74 +612,7 @@ async function intro(onStage, layout) {
   ]);
 }
 
-// Temporary font picker for choosing the title font. It shows only on
-// localhost or with ?dev in the URL, and remembers the choice in this
-// browser.
-const TITLE_FONTS = [
-  ["Fredoka", 600],
-  ["Londrina Sketch", 400],
-  ["Slackey", 400],
-  ["Chewy", 400],
-  ["Galindo", 400],
-  ["Ranchers", 400],
-  ["Allerta Stencil", 400],
-  ["Barrio", 400],
-  ["Kranky", 400],
-  ["Leckerli One", 400],
-  ["Finger Paint", 400],
-  ["Caveat Brush", 400],
-];
-const FONT_KEY = "mawilo-dev-font";
-const isDev = location.hostname === "localhost" || new URLSearchParams(location.search).has("dev");
-
-async function applyTitleFont(name) {
-  const [family, weight] = TITLE_FONTS.find(([f]) => f === name) || TITLE_FONTS[0];
-  const title = document.getElementById("title");
-  title.style.fontFamily = `"${family}", system-ui, sans-serif`;
-  title.style.fontWeight = weight;
-  await document.fonts.load(`${weight} 100px "${family}"`).catch(() => {});
-  if (title.classList.contains("floating")) {
-    const top = titleRestingPlace(title);
-    moveTitle(title, top.x, top.y);
-  }
-}
-
-async function setupFontPicker() {
-  if (!isDev) return;
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  const families = TITLE_FONTS.slice(1).map(([f]) => `family=${f.replaceAll(" ", "+")}`);
-  link.href = `https://fonts.googleapis.com/css2?${families.join("&")}&display=swap`;
-  document.head.append(link);
-
-  const picker = document.getElementById("font-picker");
-  for (const [family] of TITLE_FONTS) picker.add(new Option(family, family));
-  let saved = null;
-  try {
-    saved = localStorage.getItem(FONT_KEY);
-  } catch {
-    // Use the default font.
-  }
-  picker.value = saved && TITLE_FONTS.some(([f]) => f === saved) ? saved : TITLE_FONTS[0][0];
-  picker.hidden = false;
-  picker.addEventListener("change", () => {
-    try {
-      localStorage.setItem(FONT_KEY, picker.value);
-    } catch {
-      // The choice only lasts for this visit.
-    }
-    applyTitleFont(picker.value);
-  });
-  // Carry on with the default font if the stylesheet cannot load.
-  await new Promise((resolve) => {
-    link.addEventListener("load", resolve, { once: true });
-    link.addEventListener("error", resolve, { once: true });
-  });
-  await applyTitleFont(picker.value);
-}
-
 async function start() {
-  await setupFontPicker();
   const saved = loadLayout();
   const walkers = MAWILO_DATA.filter((m) => !m.edge).map((m) => m.file);
   let onStage;
