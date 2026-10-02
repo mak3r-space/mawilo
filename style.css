@@ -177,7 +177,8 @@ body {
 
 /* The photo of the mawilo being handled or pointed at is ringed in
    turquoise and lifts a little. */
-.polaroid.active .polaroid-frame {
+.polaroid.active .polaroid-frame,
+.polaroid.selected .polaroid-frame {
   box-shadow:
     0 0 0 3px var(--turquoise),
     0 5px 10px rgb(59 36 22 / 0.22);

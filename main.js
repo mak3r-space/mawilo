@@ -204,7 +204,7 @@ function buildLine() {
     button.querySelector(".polaroid-frame").style.setProperty("--pr", `${(tilt() - 0.5) * 9}deg`);
     button.addEventListener("click", () => {
       swing(button);
-      invite(m.file);
+      tapPhoto(m.file);
     });
     lineInner.append(button);
     polaroids.set(m.file, button);
@@ -285,7 +285,7 @@ function syncLine() {
     button.classList.toggle("offstage", !f || f.state === "leaving");
     button.classList.toggle("waiting", f?.state === "waiting");
     button.setAttribute("aria-pressed", String(onBoard));
-    button.setAttribute("aria-label", onBoard ? `Send ${m.name} away` : `Invite ${m.name}`);
+    button.setAttribute("aria-label", onBoard ? `Show ${m.name}` : `Invite ${m.name}`);
   }
 }
 
@@ -300,16 +300,110 @@ function freeSpot(name) {
   return bestSpot(Math.random, figureBox(name, 1), others);
 }
 
-// Clicking a photo on the line brings that mawilo in, or sends it out if
-// it is already on the board.
-async function invite(name) {
-  const f = figures.get(name);
-  if (f?.state === "resident") {
-    sendOff(f, exitEdge(f));
+// Selecting: the first tap on a mawilo or its photo rings the photo and
+// makes the mawilo wiggle. A second tap while it is ringed opens the card.
+let selected = null;
+let selectTimer = 0;
+
+function clearSelection() {
+  clearTimeout(selectTimer);
+  if (selected) polaroids.get(selected)?.classList.remove("selected");
+  selected = null;
+}
+
+function tapMawilo(f) {
+  if (selected === f.name) {
+    clearSelection();
+    openCard(f.name);
     return;
   }
-  if (f?.state === "leaving") return;
-  const spot = freeSpot(name);
+  clearSelection();
+  selected = f.name;
+  polaroids.get(f.name)?.classList.add("selected");
+  if (!reducedMotion) playMove(f, "wiggle");
+  selectTimer = setTimeout(clearSelection, 5000);
+}
+
+// A grey photo invites its mawilo. A colour photo selects it, like tapping
+// the mawilo itself.
+function tapPhoto(name) {
+  const f = figures.get(name);
+  if (f?.state === "resident") tapMawilo(f);
+  else if (f?.state !== "leaving") invite(name);
+}
+
+// A spot in the middle of the board, below the title.
+function centreSpot(name) {
+  const box = figureBox(name, 1);
+  const t = titleRect();
+  const top = Math.max(t.bottom, lineHeight) + box.h / 2 + 12;
+  const bottom = innerHeight - 36 - box.h / 2;
+  const p = { x: 0.5 + (Math.random() - 0.5) * 0.08, y: (top + bottom) / 2 / innerHeight };
+  return validSpot(p, box) ? p : freeSpot(name);
+}
+
+// Mawilos standing where a newcomer is heading step aside. Each one tries
+// several directions, starting with straight away from the newcomer, and
+// takes the shortest step that clears the newcomer, stays on the board and
+// does not land on another mawilo. If no step avoids every other mawilo, it
+// takes the shortest step that at least clears the newcomer.
+function makeRoom(name, spot) {
+  const pad = 16;
+  const boxOf = (f) => figureBox(f.name, f.size || 1, f.r);
+  const placed = [{ x: spot.x * innerWidth, y: spot.y * innerHeight, box: figureBox(name, 1, 0), name }];
+  const residents = [...figures.values()].filter(
+    (f) => f.name !== name && f.state === "resident" && !f.dragging,
+  );
+  for (const f of residents) {
+    placed.push({ x: f.x * innerWidth, y: f.y * innerHeight, box: boxOf(f), name: f.name });
+  }
+  const clash = (a, x, y, box) =>
+    Math.abs(x - a.x) < (box.w + a.box.w) / 2 + pad && Math.abs(y - a.y) < (box.h + a.box.h) / 2 + pad;
+
+  let delay = 0;
+  for (const f of residents) {
+    const me = placed.find((p) => p.name === f.name);
+    const newcomer = placed[0];
+    if (!clash(newcomer, me.x, me.y, me.box)) continue;
+    const away = Math.atan2(me.y - newcomer.y, me.x - newcomer.x || (Math.random() - 0.5));
+    let best = null;
+    let fallback = null;
+    for (const turn of [0, 40, -40, 80, -80, 120, -120, 180]) {
+      const angle = away + (turn * Math.PI) / 180;
+      for (let step = 15; step <= 520; step += 15) {
+        const x = me.x + Math.cos(angle) * step;
+        const y = me.y + Math.sin(angle) * step;
+        if (clash(newcomer, x, y, me.box)) continue;
+        if (!validSpot({ x: x / innerWidth, y: y / innerHeight }, me.box)) continue;
+        if (!fallback || step < fallback.step) fallback = { x, y, step };
+        const crowded = placed.some((p) => p !== me && p !== newcomer && clash(p, x, y, me.box));
+        if (!crowded) {
+          if (!best || step < best.step) best = { x, y, step };
+          break;
+        }
+      }
+    }
+    const target = best || fallback;
+    if (!target) continue;
+    me.x = target.x;
+    me.y = target.y;
+    const wait = delay;
+    delay += 120;
+    setTimeout(async () => {
+      if (f.dragging || f.state !== "resident") return;
+      await moveTo(f, target.x / innerWidth, target.y / innerHeight, "walk", 1100);
+      saveLayout();
+    }, wait);
+  }
+}
+
+// Bring a mawilo in from offstage, or all the way in if it is waiting at
+// the edge. It heads for the middle and the others make room.
+async function invite(name) {
+  const f = figures.get(name);
+  if (f?.state === "resident" || f?.state === "leaving") return;
+  const spot = centreSpot(name);
+  if (!byFile.get(name).edge) makeRoom(name, spot);
   if (f?.state === "waiting") {
     clearTimeout(f.leaveTimer);
     waiting = null;
@@ -683,6 +777,7 @@ function enableDrag(f) {
     centreY = box.top + box.height / 2;
     startAngle = Math.atan2(event.clientY - centreY, event.clientX - centreX);
     polaroids.get(f.name)?.classList.add("active");
+    if (selected && selected !== f.name) clearSelection();
     f.fromEdge = !fullyOnScreen(f);
     mode = !f.fromEdge && pointerZone(f, event) > DRAG_ZONE ? "turn" : "drag";
     f.el.classList.add(mode === "turn" ? "turning" : "lifted");
@@ -731,7 +826,7 @@ function enableDrag(f) {
       return;
     }
     if (moved < TAP_DISTANCE) {
-      openCard(f.name);
+      tapMawilo(f);
       return;
     }
     if (!hasDragged) {
