@@ -4,7 +4,6 @@
   --ink: #3b2416;
   --muted: #a08c78;
   --line: #e6d9c6;
-  --title-pale: #ede2d0;
   --size: min(19vh, 23vw);
 }
 
@@ -22,8 +21,7 @@ body {
   font-family: "Fredoka", system-ui, sans-serif;
 }
 
-/* The title starts alone in the middle in ink, then moves to the top and
-   turns pale so the mawilos stand out in front of it. */
+/* The title starts alone in the middle, then moves to the top. */
 .title {
   position: fixed;
   left: 50%;
@@ -52,11 +50,6 @@ body {
   font-size: 190px;
   letter-spacing: 4px;
   fill: var(--ink);
-  transition: fill 1600ms ease;
-}
-
-.title.up text {
-  fill: var(--title-pale);
 }
 
 .hint,
