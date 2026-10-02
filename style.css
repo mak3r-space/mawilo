@@ -265,11 +265,14 @@ body {
   left: 50%;
   bottom: 24px;
   z-index: 2000;
-  width: min(620px, calc(100% - 32px));
+  width: min(820px, calc(100% - 32px));
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
   display: grid;
-  grid-template-columns: 42% 1fr;
-  gap: 20px;
-  padding: 24px;
+  grid-template-columns: 40% 1fr;
+  align-items: center;
+  gap: 28px;
+  padding: 32px;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 20px;
@@ -306,7 +309,7 @@ body {
   margin: 4px 40px 10px 0;
   white-space: nowrap;
   font-family: "Slackey", "Outfit", system-ui, sans-serif;
-  font-size: 26px;
+  font-size: 34px;
   font-weight: 400;
   line-height: 1.2;
 }
@@ -329,9 +332,9 @@ body {
 }
 
 .card-story {
-  margin: 0 0 16px;
-  font-size: 17px;
-  line-height: 1.5;
+  margin: 0 0 14px;
+  font-size: 18px;
+  line-height: 1.55;
 }
 
 .card-story:empty {
@@ -375,12 +378,23 @@ body {
 @media (max-width: 520px) {
   .card {
     grid-template-columns: 1fr;
+    gap: 16px;
     bottom: 16px;
+    max-height: calc(100dvh - 32px);
+    padding: 24px;
   }
 
   .card-picture {
     aspect-ratio: auto;
-    height: 30vh;
+    height: 24vh;
+  }
+
+  .card-text h2 {
+    font-size: 28px;
+  }
+
+  .card-story {
+    font-size: 17px;
   }
 }
 
