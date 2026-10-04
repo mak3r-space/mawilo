@@ -1,9 +1,9 @@
-// One entry per mawilo. `file` is the image name in img/ and img/photo/.
+// One entry per MaWiLo. `file` is the image name in img/ and img/photo/.
 // The card shows the name as its heading and the description below it. It
 // hides the story when it is empty. The fabrics are guesses from the
 // photos.
 //
-// `edge` marks photos that are cut off at the bottom. Those mawilos only
+// `edge` marks photos that are cut off at the bottom. Those MaWiLos only
 // peek up from the bottom of the screen and are never dragged around.
 const MAWILO_DATA = [
   {
@@ -28,7 +28,7 @@ const MAWILO_DATA = [
     description: "Green, in tartan pants",
     fabrics: "Green fleece, tartan fleece",
     story:
-      "Plaid says the tartan trousers are a family heirloom from a long line of Scottish mawilos. Nobody has ever met this family. Plaid practises the bagpipes every morning, silently, out of politeness.",
+      "Plaid says the tartan trousers are a family heirloom from a long line of Scottish MaWiLos. Nobody has ever met this family. Plaid practises the bagpipes every morning, silently, out of politeness.",
   },
   {
     file: "cream-purple-top-ruffle",
@@ -148,7 +148,7 @@ const MAWILO_DATA = [
     description: "Tan, with a row of buttons",
     fabrics: "Tan fleece, white buttons",
     story:
-      "Buttons has five buttons down the front, and only one of them does anything. Nobody knows which one. Buttons is very tall for a mawilo and is often asked to reach the biscuits.",
+      "Buttons has five buttons down the front, and only one of them does anything. Nobody knows which one. Buttons is very tall for a MaWiLo and is often asked to reach the biscuits.",
   },
   {
     file: "blue-anteater-shaggy-mane",

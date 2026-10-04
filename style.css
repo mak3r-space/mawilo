@@ -57,8 +57,8 @@ body {
   transform-origin: 50% 0;
 }
 
-/* The laundry line along the top holds a photo of every mawilo. Photos of
-   mawilos on the board are in colour, and all others are faded. */
+/* The laundry line along the top holds a photo of every MaWiLo. Photos of
+   MaWiLos on the board are in colour, and all others are faded. */
 .line {
   position: fixed;
   top: 0;
@@ -147,7 +147,7 @@ body {
   filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.25));
 }
 
-/* The photo of the mawilo being handled or pointed at lifts, grows a
+/* The photo of the MaWiLo being handled or pointed at lifts, grows a
    little and glows turquoise. */
 .polaroid-frame {
   transition:
@@ -186,7 +186,7 @@ body {
   initial-value: 0;
 }
 
-/* A mawilo is placed by its centre point, stored as a fraction of the
+/* A MaWiLo is placed by its centre point, stored as a fraction of the
    board in --x and --y. */
 .mawilo {
   --turn-cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cpath d='M21 9a9 9 0 1 0 1.5 8' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M21 9a9 9 0 1 0 1.5 8' fill='none' stroke='%233b2416' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M23 3v7h-7' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M23 3v7h-7' fill='none' stroke='%233b2416' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 14 14;
@@ -468,6 +468,52 @@ body {
 
 .card-close:hover {
   color: var(--watermelon);
+}
+
+/* Tapping the photo shuffles it. Horizontal swipes on the card step to
+   the next MaWiLo, and vertical ones still scroll a tall card. */
+.card {
+  touch-action: pan-y;
+}
+
+.card-flip {
+  cursor: pointer;
+}
+
+/* Arrow buttons for stepping, on screens with a mouse. */
+.card-step {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-top: -18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.card-step:hover {
+  color: var(--turquoise);
+}
+
+.card-step.prev {
+  left: 2px;
+}
+
+.card-step.next {
+  right: 2px;
+}
+
+@media (hover: none) {
+  .card-step {
+    display: none;
+  }
 }
 
 @media (max-width: 520px) {

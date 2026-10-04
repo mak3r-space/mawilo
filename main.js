@@ -1,5 +1,5 @@
-// Mawilos on the board stay where they are put. The rest wait offstage
-// until they are invited in from the line. Pushing a mawilo to the edge
+// MaWiLos on the board stay where they are put. The rest wait offstage
+// until they are invited in from the line. Pushing a MaWiLo to the edge
 // sends it offstage again.
 
 const SCALE = {
@@ -20,7 +20,7 @@ const SCALE = {
 };
 
 const TAP_DISTANCE = 6;
-// Pointer presses inside this fraction of a mawilo's half-width and
+// Pointer presses inside this fraction of a MaWiLo's half-width and
 // half-height drag it. Presses outside turn it.
 const DRAG_ZONE = 0.55;
 const MAX_TURN = 40;
@@ -137,7 +137,7 @@ function validSpot(p, box) {
   return !overlapsTitle(p, box);
 }
 
-// How many mawilos fit on the board at the start, from about 4 on a phone
+// How many MaWiLos fit on the board at the start, from about 4 on a phone
 // to about 10 on a large screen. The line and the title take up room too.
 function capacity() {
   const size = figureSize();
@@ -147,7 +147,7 @@ function capacity() {
 }
 
 // Pick the best of many random spots: a valid one furthest from the other
-// mawilos. If no try is valid, fall back to the middle below the title.
+// MaWiLos. If no try is valid, fall back to the middle below the title.
 function bestSpot(rand, box, others) {
   const aspect = innerWidth / innerHeight;
   let best = null;
@@ -178,9 +178,9 @@ function fitsAmong(p, box, placed) {
   );
 }
 
-// Scatter mawilos loosely over the board, the same way on every load, with
+// Scatter MaWiLos loosely over the board, the same way on every load, with
 // slightly varied sizes. None of them overlaps the title or another one.
-// A mawilo that does not fit stays offstage, so on small screens fewer
+// A MaWiLo that does not fit stays offstage, so on small screens fewer
 // start on the board.
 function scatterLayout(names) {
   const rand = seededRandom(7);
@@ -323,15 +323,15 @@ function exitEdge(f) {
   return byFile.get(f.name).edge ? "bottom" : nearestEdge(f);
 }
 
-// A spot on the board away from the mawilos already there, clear of the
+// A spot on the board away from the MaWiLos already there, clear of the
 // title.
 function freeSpot(name) {
   const others = [...figures.values()].filter((f) => f.state === "resident");
   return bestSpot(Math.random, figureBox(name, 1), others);
 }
 
-// Selecting: the first tap on a mawilo or its photo rings the photo and
-// makes the mawilo wiggle. A second tap while it is ringed opens the card.
+// Selecting: the first tap on a MaWiLo or its photo rings the photo and
+// makes the MaWiLo wiggle. A second tap while it is ringed opens the card.
 let selected = null;
 let selectTimer = 0;
 
@@ -354,8 +354,8 @@ function tapMawilo(f) {
   selectTimer = setTimeout(clearSelection, 5000);
 }
 
-// A grey photo invites its mawilo. A colour photo opens its card and gives
-// the mawilo a small wiggle so it is easy to spot.
+// A grey photo invites its MaWiLo. A colour photo opens its card and gives
+// the MaWiLo a small wiggle so it is easy to spot.
 function tapPhoto(name) {
   const f = figures.get(name);
   if (f?.state === "resident") {
@@ -377,10 +377,10 @@ function centreSpot(name) {
   return validSpot(p, box) ? p : freeSpot(name);
 }
 
-// Mawilos standing where a newcomer is heading step aside. Each one tries
+// MaWiLos standing where a newcomer is heading step aside. Each one tries
 // several directions, starting with straight away from the newcomer, and
 // takes the shortest step that clears the newcomer, stays on the board and
-// does not land on another mawilo. If no step avoids every other mawilo, it
+// does not land on another MaWiLo. If no step avoids every other MaWiLo, it
 // takes the shortest step that at least clears the newcomer.
 function makeRoom(name, spot) {
   const pad = 16;
@@ -431,7 +431,7 @@ function makeRoom(name, spot) {
   }
 }
 
-// Bring a mawilo in from offstage. It heads for the middle, the others make
+// Bring a MaWiLo in from offstage. It heads for the middle, the others make
 // room, and its card opens once it has arrived.
 async function invite(name) {
   const f = figures.get(name);
@@ -593,10 +593,10 @@ function setSize(f, size) {
   f.el.style.setProperty("--s", (SCALE[f.name] || 1) * f.size);
 }
 
-// Pinch to resize on touch screens. The first finger on a mawilo grabs it,
+// Pinch to resize on touch screens. The first finger on a MaWiLo grabs it,
 // and a second finger anywhere on the screen turns the grab into a pinch.
 // These listeners run in the capture phase so they see the second finger
-// before the mawilo under it does.
+// before the MaWiLo under it does.
 const touches = new Map();
 let pinch = null;
 
@@ -677,7 +677,7 @@ function enableDrag(f) {
     playMove(f, pick(["wiggle", "hop"]));
   });
 
-  // Scroll the wheel or pinch the trackpad over a mawilo to resize it.
+  // Scroll the wheel or pinch the trackpad over a MaWiLo to resize it.
   f.el.addEventListener(
     "wheel",
     (event) => {
@@ -695,7 +695,7 @@ function enableDrag(f) {
   f.el.addEventListener("pointerdown", (event) => {
     if (f.state === "leaving") return;
     event.preventDefault();
-    // A second finger on the same mawilo is part of a pinch, not a new grab.
+    // A second finger on the same MaWiLo is part of a pinch, not a new grab.
     if (f.dragging) return;
     f.touchId = event.pointerType === "touch" ? event.pointerId : undefined;
     f.el.setPointerCapture(event.pointerId);
@@ -848,7 +848,7 @@ function playMove(f, name) {
   };
 }
 
-// Now and then, one mawilo on the board does a small move. The same one
+// Now and then, one MaWiLo on the board does a small move. The same one
 // never moves twice in a row.
 function startIdleMoves() {
   let last = null;
@@ -917,8 +917,10 @@ function showCardPicture(animate = false) {
   }, 315);
 }
 
-function openCard(file) {
+function fillCard(file) {
   const m = byFile.get(file);
+  if (cardFile) polaroids.get(cardFile)?.classList.remove("selected");
+  polaroids.get(file)?.classList.add("selected");
   cardFile = file;
   showingPhoto = false;
   cardImg.src = `img/${file}.png`;
@@ -930,6 +932,10 @@ function openCard(file) {
   document.getElementById("card-description").textContent = m.name ? m.description : "";
   document.getElementById("card-fabrics").textContent = m.fabrics;
   document.getElementById("card-story").textContent = m.story;
+}
+
+function openCard(file) {
+  fillCard(file);
   returnFocus = document.activeElement;
   card.hidden = false;
   void card.offsetWidth;
@@ -940,18 +946,85 @@ function openCard(file) {
 async function closeCard() {
   if (!card.classList.contains("open")) return;
   card.classList.remove("open");
+  polaroids.get(cardFile)?.classList.remove("selected");
   returnFocus?.focus?.({ preventScroll: true });
   await wait(reducedMotion ? 0 : 550);
   if (!card.classList.contains("open")) card.hidden = true;
 }
 
-cardToggle.addEventListener("click", () => {
+function shufflePhotos() {
   showingPhoto = !showingPhoto;
   showCardPicture(true);
+}
+
+cardToggle.addEventListener("click", shufflePhotos);
+
+// Step to the previous or next MaWiLo's card, in the order of the line,
+// going round at the ends. The card's contents slide out one way and the
+// next MaWiLo's slide in from the other.
+let stepping = false;
+
+async function stepCard(direction) {
+  if (stepping || !card.classList.contains("open")) return;
+  stepping = true;
+  const n = MAWILO_DATA.length;
+  const i = MAWILO_DATA.findIndex((m) => m.file === cardFile);
+  const next = MAWILO_DATA[(i + direction + n) % n].file;
+  const parts = [card.querySelector(".card-picture"), card.querySelector(".card-text")];
+  if (reducedMotion) {
+    fillCard(next);
+  } else {
+    const out = { duration: 180, easing: "ease-in", fill: "forwards" };
+    await Promise.all(
+      parts.map(
+        (el) =>
+          el.animate([{ transform: "translateX(0)", opacity: 1 }, { transform: `translateX(${-direction * 48}px)`, opacity: 0 }], out)
+            .finished,
+      ),
+    );
+    fillCard(next);
+    await Promise.all(
+      parts.map((el) => {
+        el.getAnimations().forEach((a) => a.cancel());
+        return el.animate(
+          [{ transform: `translateX(${direction * 48}px)`, opacity: 0 }, { transform: "translateX(0)", opacity: 1 }],
+          { duration: 260, easing: "ease-out" },
+        ).finished;
+      }),
+    );
+  }
+  stepping = false;
+}
+
+document.getElementById("card-prev").addEventListener("click", () => stepCard(-1));
+document.getElementById("card-next").addEventListener("click", () => stepCard(1));
+
+// Swipe left or right on the card to step, and tap the photo to shuffle.
+// A swipe does not count as a tap.
+let swipeStart = null;
+let swiped = false;
+card.addEventListener("pointerdown", (event) => {
+  swipeStart = { x: event.clientX, y: event.clientY };
+  swiped = false;
+});
+card.addEventListener("pointerup", (event) => {
+  if (!swipeStart) return;
+  const dx = event.clientX - swipeStart.x;
+  const dy = event.clientY - swipeStart.y;
+  swipeStart = null;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    swiped = true;
+    stepCard(dx < 0 ? 1 : -1);
+  }
+});
+document.getElementById("card-flip").addEventListener("click", () => {
+  if (!swiped) shufflePhotos();
 });
 document.getElementById("card-close").addEventListener("click", closeCard);
 addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeCard();
+  if (event.key === "ArrowLeft") stepCard(-1);
+  if (event.key === "ArrowRight") stepCard(1);
 });
 board.addEventListener("pointerdown", (event) => {
   if (event.target === board) closeCard();
@@ -970,10 +1043,9 @@ function moveTitle(title, x, y, scale = 1) {
 // The sign is carried at this size and grows to full size as it floats up.
 const CARRIED_SCALE = 0.9;
 
-// Two mawilos carry the title in from the left along the bottom edge, stop
-// in the middle, and push it up so it floats to the top. Then the other
-// starting mawilos waddle in one after another from the nearest side or
-// from below.
+// Two MaWiLos carry the title up from the bottom edge, stop in the middle,
+// and push it up so it floats to the top. Then the other starting MaWiLos
+// waddle in one after another from the nearest side or from below.
 async function intro(onStage, layout) {
   const title = document.getElementById("title");
   const carriersStay = onStage.includes(SIGN_CARRIERS);
