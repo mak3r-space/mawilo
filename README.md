@@ -6,14 +6,15 @@ around to arrange them the way you like: drag from the middle, turn by the
 edges, and pinch or scroll to resize. Nothing is saved, so a reload starts
 fresh.
 
-A photo of every MaWiLo hangs on a laundry line at the top. Photos of
-MaWiLos on the board are in colour, and the others are grey. Tap a grey
-photo to invite that MaWiLo in. It walks to the middle, the others make
-room, and its card opens. Push a MaWiLo to the edge of the screen and it walks off.
+The photo box in the bottom right corner holds a photo of every MaWiLo
+still to meet. Tap it to open the cards, and swipe or use the arrows to go
+through them. "invite in" brings a MaWiLo onto the board, where it walks to
+the middle and the others make room, and "send home" walks it off again.
+Tap a MaWiLo on the board to open its card, and tap the card photo to see
+the original photo.
 
-Tap a MaWiLo or its colour photo to pick it out, and tap again to open its
-card, with its name, story, fabrics and the original photo. The card text
-lives in `data.js`.
+Blep and Moustachio do their stop-motion tricks now and then, and on their
+cards.
 
 Now and then one MaWiLo on the board does a small move, like a wiggle or
 a hop, to invite play.

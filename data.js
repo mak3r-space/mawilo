@@ -3,6 +3,9 @@
 // hides the story when it is empty. The fabrics are guesses from the
 // photos.
 //
+// `frames` is the number of animation frames in img/frames/, for MaWiLos
+// with a trick. Frame 1 is the same as the board image.
+//
 // `edge` marks photos that are cut off at the bottom. Those MaWiLos only
 // peek up from the bottom of the screen and are never dragged around.
 const MAWILO_DATA = [
@@ -140,7 +143,7 @@ const MAWILO_DATA = [
     description: "A pair in paisley scarves",
     fabrics: "Light blue fleece, navy fleece, paisley silk",
     story:
-      "The Twins have never been apart, not even for one stitch. They share two paisley scarves and argue every morning about whose is whose. They carry the sign because they are strongest when they lean on each other.",
+      "The Twins have never been apart, not even for one stitch. They share two paisley scarves and argue every morning about whose is whose. They used to carry the sign, and now they cheer for Bobble and Ziggy instead.",
   },
   {
     file: "tan-white-button-row",
@@ -156,7 +159,7 @@ const MAWILO_DATA = [
     description: "The blue elephant with a shaggy mane",
     fabrics: "Blue fleece, blue and brown fleece fringe, pearl eye",
     story:
-      "Ellie the elephant is shy and only comes up from the bottom of the screen when it feels safe. The shaggy mane is mostly for show and partly for hiding snacks. Ellie never forgets a face, but often forgets where the snacks are.",
+      "Ellie the elephant is shy and waits at the bottom of the photo box until someone asks. The shaggy mane is mostly for show and partly for hiding snacks. Ellie never forgets a face, but often forgets where the snacks are.",
     edge: "right",
   },
   {
@@ -167,5 +170,135 @@ const MAWILO_DATA = [
     story:
       "Curly's hair is yarn that curled up in fright in the washing machine and never uncurled. Curly finds this very stylish. Curly is the tallest teal thing in the house, except for the teapot.",
     edge: "left",
+  },
+  {
+    file: "blue-tassels-striped-body",
+    name: "Bobble",
+    description: "Blue, with tassels and stripes",
+    fabrics: "Blue fleece, striped knit, yarn tassels, buttons",
+    story:
+      "Bobble and Ziggy are best friends and carry the sign every morning. Bobble wears every tassel ever found under the sofa and jingles a little when walking. Bobble thinks every day is a parade.",
+  },
+  {
+    file: "blue-striped-dress",
+    name: "Ziggy",
+    description: "Blue, in a striped dress",
+    fabrics: "Blue fleece, orange and cream striped fleece, buttons",
+    story:
+      "Ziggy is the strongest MaWiLo and the first to say \"let's go\". The striped dress was a beach towel that wanted to see the world. Ziggy and Bobble have never once dropped the sign, well, almost never.",
+  },
+  {
+    file: "purple-flowers-tongue",
+    name: "Blep",
+    description: "Purple and flowery, with a tongue",
+    fabrics: "Embossed purple fleece, pink and red fleece, flower buttons",
+    story:
+      "Blep sticks out a tongue at everyone, but only to say hello. The tongue goes left, then right, then up, and nobody can stop it. Blep was very proud to be in a moving picture.",
+    frames: 4,
+  },
+  {
+    file: "maroon-red-belly",
+    name: "Plum",
+    description: "Maroon, with a red belly",
+    fabrics: "Maroon fleece, red velvet, buttons",
+    story:
+      "Plum has a red velvet belly and likes to have it patted. Plum is shy at parties but dances wildly in the kitchen. Plum's favourite food is anything red.",
+  },
+  {
+    file: "pink-round-yarn-hair",
+    name: "Hoop",
+    description: "Round and pink, with yarn hair",
+    fabrics: "Pink fleece, maroon yarn, buttons",
+    story:
+      "Hoop is round and rolls more than walks. The handle on top is for carrying Hoop to places, which Hoop insists on. The yarn hair has never been brushed and never will be.",
+  },
+  {
+    file: "grey-sparkle-ruffle-bib",
+    name: "Glitter",
+    description: "Grey and sparkly, with a ruffle",
+    fabrics: "Sparkly grey boucle, salmon ruffle ribbon, buttons",
+    story:
+      "Glitter sparkles in the right light and complains in the wrong one. The salmon ruffle is a medal from a competition Glitter made up. Glitter won, of course.",
+  },
+  {
+    file: "orange-gold-collar",
+    name: "Marmalade",
+    description: "Orange, with a golden collar",
+    fabrics: "Orange fleece, gold brocade, buttons",
+    story:
+      "Marmalade wears a golden collar and expects to be called Your Orangeness. Marmalade likes toast, sunshine and being right. Marmalade points at things to make them happen.",
+  },
+  {
+    file: "light-blue-hammerhead",
+    name: "Hammer",
+    description: "Light blue, with a hammer head",
+    fabrics: "Light blue cable knit, buttons",
+    story:
+      "Hammer has a head like a hammer and uses it to hang pictures. Hammer was knitted from a jumper that was too itchy for anyone else. Hammer dreams of swimming in the bath.",
+  },
+  {
+    file: "brown-blue-hat",
+    name: "Pointy",
+    description: "Brown, with a pointy blue hat",
+    fabrics: "Brown corduroy, turquoise fleece, purple frill, buttons",
+    story:
+      "Pointy is never seen without the blue hat, not even in bed. The hat might be magic, but the only spell Pointy knows makes socks go missing. Pointy says sorry about that.",
+  },
+  {
+    file: "maroon-elephant-blue-buttons",
+    name: "Trunky",
+    description: "A maroon elephant",
+    fabrics: "Maroon fleece, light blue fleece, buttons",
+    story:
+      "Trunky is an elephant with three trunks and cannot decide which one is the real one. Trunky waves with all of them, just to be safe. The blue ears are for listening to rain.",
+  },
+  {
+    file: "cream-floral-skirt",
+    name: "Polka",
+    description: "Cream, in a flowery skirt",
+    fabrics: "Cream fleece, flowery cotton, buttons",
+    story:
+      "Polka wears a flowery skirt that swishes when Polka spins. Polka spins a lot. The rosy button cheeks appear whenever someone says something kind.",
+  },
+  {
+    file: "pink-tweed-patchwork",
+    name: "Tweedy",
+    description: "Pink tweed patchwork",
+    fabrics: "Pink fleece, pink and grey tweed, buttons",
+    story:
+      "Tweedy is made from a fancy coat and is very polite about it. Tweedy says please and thank you, even to doors. One ear is fluffy and one ear is tweed, and both are listening.",
+  },
+  {
+    file: "periwinkle-elephant",
+    name: "Jumbo",
+    description: "A blue elephant",
+    fabrics: "Periwinkle fleece, maroon fleece, buttons",
+    story:
+      "Jumbo is the biggest of the elephant MaWiLos and the gentlest. Jumbo curls the trunk into a hook to carry small friends across puddles. Jumbo never forgets a birthday.",
+  },
+  {
+    file: "madame-diva-pearls",
+    name: "Madame Diva",
+    description: "A tall lady in a dark dress",
+    fabrics: "White fleece, black lace print fabric, real pearl earrings",
+    story:
+      "Madame Diva wears real pearl earrings and will tell you so. She is missing an eye, which she says makes her mysterious. She only sings in the bath, and only opera.",
+  },
+  {
+    file: "blue-purple-patchwork-swirl",
+    name: "Swirly",
+    description: "Blue and purple patchwork, with a swirl",
+    fabrics: "Blue, white, lilac and plum fleece, buttons",
+    story:
+      "Swirly is sewn from four colours and every one wants to go a different way. The curly tail is for spinning in circles. Swirly is dizzy most of the time and likes it that way.",
+  },
+  {
+    file: "moustachio",
+    name: "Moustachio",
+    description: "Black, with a magnificent moustache",
+    fabrics: "Black fleece, brown fur, buttons",
+    story:
+      "Moustachio's moustache has a mind of its own. It can droop, curl up, twirl into spectacles or perch on top like a hat. Moustachio is a great fan of the moustache, as you might expect.",
+    frames: 5,
   },
 ];
