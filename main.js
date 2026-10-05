@@ -277,16 +277,13 @@ function footerRect() {
   return { left: r.left - 8, top: r.top - 8, right: r.right + 8, bottom: r.bottom + 8 };
 }
 
-// MaWiLos that "bye" can pick. Bobble and Ziggy stay on the board.
+// MaWiLos that "bye" can pick. Bobble and Ziggy leave last, together.
 function byeChoices() {
-  return [...figures.values()].filter(
-    (f) =>
-      f.state === "resident" &&
-      !f.parked &&
-      !f.dragging &&
-      !f.el.matches(".walking") &&
-      !SIGN_CARRIERS.includes(f.name),
+  const ready = [...figures.values()].filter(
+    (f) => f.state === "resident" && !f.parked && !f.dragging && !f.el.matches(".walking"),
   );
+  const others = ready.filter((f) => !SIGN_CARRIERS.includes(f.name));
+  return others.length ? others : ready;
 }
 
 // The tickets bring in the MaWiLo on top of the stack, or say bye to a
@@ -303,8 +300,12 @@ ticketIn.addEventListener("click", () => {
 
 ticketBye.addEventListener("click", () => {
   if (!document.body.classList.contains("footer-in")) return;
-  const f = pick(byeChoices());
-  if (f) sendOff(f);
+  const choices = byeChoices();
+  if (choices.length && choices.every((f) => SIGN_CARRIERS.includes(f.name))) {
+    for (const f of choices) sendOff(f);
+  } else if (choices.length) {
+    sendOff(pick(choices));
+  }
 });
 
 // When the top photo changes, it lifts up and tips to the side and the next
@@ -364,7 +365,11 @@ function syncStack() {
   fitFooter();
   ticketIn.setAttribute("aria-label", waiting.length ? `come in, ${waiting.length} MaWiLos to meet` : "all here");
   ticketIn.disabled = waiting.length === 0;
-  ticketBye.disabled = byeChoices().length === 0;
+  // With everyone gone, the "bye" ticket turns pale and says so.
+  const anyoneHere = [...figures.values()].some((f) => f.state === "resident");
+  ticketBye.disabled = !anyoneHere;
+  ticketBye.querySelector(".ticket-text").textContent = anyoneHere ? "bye" : "all gone!";
+  ticketBye.classList.toggle("all-gone", !anyoneHere);
   stack.setAttribute("aria-label", `Photo stack, ${waiting.length} MaWiLos to meet`);
   if (album.classList.contains("open")) syncAlbum();
 }

@@ -149,7 +149,8 @@ body {
   left: calc(16px + var(--stub, 16px) + 7px);
 }
 
-.ticket-in.all-here::before {
+.ticket-in.all-here::before,
+.ticket-bye.all-gone::before {
   display: none;
 }
 
