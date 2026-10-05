@@ -469,8 +469,8 @@ body {
   text-overflow: ellipsis;
 }
 
-/* The close button floats over the grid on a soft round backing, so it
-   stays readable while the photos scroll under it. */
+/* The close button floats over the grid. A soft glow keeps it readable
+   while the photos scroll under it. */
 .album-close {
   position: fixed;
   top: 12px;
@@ -482,10 +482,9 @@ body {
   height: 46px;
   padding: 0 0 3px;
   border: 0;
-  border-radius: 50%;
-  background: rgb(255 250 243 / 0.92);
-  box-shadow: 0 2px 8px rgb(59 36 22 / 0.18);
+  background: none;
   color: var(--ink);
+  text-shadow: 0 0 6px var(--bg), 0 0 12px var(--bg);
   font-size: 30px;
   line-height: 1;
   cursor: pointer;
