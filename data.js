@@ -215,7 +215,7 @@ const MAWILO_DATA = [
     description: "Purple and flowery, with a tongue",
     fabrics: "Embossed purple fleece, pink and red fleece, flower buttons",
     story:
-      "Julia sticks out her tongue at everyone, but only to say hello. The tongue goes left, then right, then up, and nobody can stop it. She once said \"Get out of my way, it's time for Creative Collective!\" and nobody has argued since.",
+      "Julia found software engineering quite defective, with a singular lack of perspective. So one day she stuck out her tongue and said, \"Get out of my way, it's time for Creative Collective!\" Her tongue has gone left, right and up ever since.",
     frames: 4,
   },
   {
