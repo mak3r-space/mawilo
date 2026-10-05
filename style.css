@@ -396,8 +396,20 @@ body {
   }
 }
 
-.peek {
+
+/* The small "next" ticket on phone cards. */
+.card-next-ticket {
   display: none;
+  justify-self: end;
+  margin-top: 8px;
+  padding: 8px 14px 8px 22px;
+  background: var(--turquoise);
+  font-size: 15px;
+  transform: rotate(2deg);
+}
+
+.card-next-ticket::before {
+  left: 12px;
 }
 
 /* Album: every MaWiLo as a small instant photo with its name, laid out on
@@ -604,8 +616,12 @@ body {
   color: var(--ink);
 }
 
+/* The tagline stands a little apart from the story below it. */
 .card-description {
-  margin: 0 0 8px;
+  margin: 0 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1.5px dashed var(--line);
+  font-weight: 600;
   font-size: 18px;
   line-height: 1.4;
 }
@@ -631,33 +647,6 @@ body {
   display: none;
 }
 
-.card-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-/* The card button brings in a MaWiLo that is not on the board. */
-.card-action {
-  padding: 6px 16px;
-  border: 2px solid var(--watermelon);
-  border-radius: 999px;
-  background: var(--watermelon);
-  color: #fff;
-  font: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.card-action[hidden] {
-  display: none;
-}
-
-.card-action:hover {
-  filter: brightness(1.08);
-}
-
 .card-close {
   position: absolute;
   top: 8px;
@@ -676,8 +665,7 @@ body {
   color: var(--watermelon);
 }
 
-/* Arrow buttons for stepping. Phones show the neighbours peeking out
-   instead. */
+/* Arrow buttons for stepping. Phones show a "next" ticket instead. */
 .card-step {
   position: absolute;
   top: 50%;
@@ -732,45 +720,14 @@ body {
     padding-top: 0;
   }
 
-  /* On phones, the previous and next MaWiLos peek out from behind the
-     photo instead of arrows. Tap one to step to it. */
+  /* On phones a small "next" ticket at the bottom of the card steps to
+     the next MaWiLo, as does a swipe. */
   .card-step {
     display: none;
   }
 
-  .card-picture {
-    position: relative;
-  }
-
-  .peek {
-    position: absolute;
-    top: 16%;
-    z-index: 0;
+  .card-next-ticket {
     display: block;
-    width: 46%;
-    padding: 4px 4px 14px;
-    border: 0;
-    background: #fff;
-    box-shadow: 0 2px 6px rgb(59 36 22 / 0.18);
-    cursor: pointer;
-  }
-
-  .peek img {
-    display: block;
-    width: 100%;
-    aspect-ratio: 1;
-    object-fit: contain;
-    background: #f3ebde;
-  }
-
-  .peek.prev {
-    left: -30%;
-    transform: rotate(-9deg);
-  }
-
-  .peek.next {
-    right: -30%;
-    transform: rotate(8deg);
   }
 
   .card-flip {

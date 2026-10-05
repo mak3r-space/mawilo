@@ -280,7 +280,12 @@ function boxRect() {
 // MaWiLos that "bye" can pick. Bobble and Ziggy stay on the board.
 function byeChoices() {
   return [...figures.values()].filter(
-    (f) => f.state === "resident" && !f.dragging && !f.el.matches(".walking") && !SIGN_CARRIERS.includes(f.name),
+    (f) =>
+      f.state === "resident" &&
+      !f.parked &&
+      !f.dragging &&
+      !f.el.matches(".walking") &&
+      !SIGN_CARRIERS.includes(f.name),
   );
 }
 
@@ -354,7 +359,6 @@ function syncBox() {
   quickIn.disabled = waiting.length === 0;
   quickBye.disabled = byeChoices().length === 0;
   box.setAttribute("aria-label", `Photo stack, ${waiting.length} MaWiLos to meet`);
-  if (card.classList.contains("open")) syncCardAction();
   if (album.classList.contains("open")) syncAlbum();
 }
 
@@ -434,10 +438,11 @@ function freeSpot(name) {
   return bestSpot(Math.random, figureBox(name, 1), others);
 }
 
-// Tapping a MaWiLo makes it do its signature move, and then its card
-// opens.
+// Tapping a MaWiLo starts its signature move, and its card opens shortly
+// after, while a longer move finishes behind it.
 async function tapMawilo(f) {
-  await playSignature(f);
+  playSignature(f);
+  await wait(reducedMotion ? 0 : 700);
   openCard(f.name);
 }
 
@@ -1030,7 +1035,7 @@ function crowdSolid(bodies) {
     innerWidth * innerHeight - (t.right - t.left) * (t.bottom - t.top) - (k.right - k.left) * (k.bottom - k.top);
   const used = bodies.reduce((sum, b) => sum + b.full.width * b.full.height, 0);
   if (!used) return SOLID;
-  return clamp(Math.sqrt((free * 0.5) / used), 0.45, SOLID);
+  return clamp(Math.sqrt((Math.max(0, free) * 0.5) / used), 0.45, SOLID);
 }
 // The share of an overlap that is undone in one frame. Lower is softer.
 const STIFFNESS = 0.22;
@@ -1084,7 +1089,7 @@ function openFooter() {
 function startBumping() {
   const step = () => {
     const bodies = [...figures.values()]
-      .filter((f) => f.state === "resident")
+      .filter((f) => f.state === "resident" && !f.parked)
       .map((f) => ({
         f,
         box: solidBox(f),
@@ -1256,32 +1261,8 @@ function fillCard(file) {
   document.getElementById("card-description").textContent = m.name ? m.description : "";
   document.getElementById("card-fabrics").textContent = m.fabrics;
   document.getElementById("card-story").textContent = m.story;
-  // The neighbours on each side peek out from behind the photo on phones.
-  const n = MAWILO_DATA.length;
-  const i = MAWILO_DATA.indexOf(m);
-  document.querySelector("#peek-prev img").src = `img/${MAWILO_DATA[(i - 1 + n) % n].file}.png`;
-  document.querySelector("#peek-next img").src = `img/${MAWILO_DATA[(i + 1) % n].file}.png`;
-  syncCardAction();
   loopCardTrick(m);
 }
-
-// The card button brings in a MaWiLo that is not on the board. It is
-// hidden for the ones on the board or on their way off.
-const cardAction = document.getElementById("card-action");
-
-function syncCardAction() {
-  if (!cardFile) return;
-  const f = figures.get(cardFile);
-  cardAction.hidden = Boolean(f);
-}
-
-cardAction.addEventListener("click", async () => {
-  const name = cardFile;
-  const f = figures.get(name);
-  // Put the card and the album away first, so the walk can be seen.
-  await Promise.all([closeCard(), closeAlbum()]);
-  if (!f) invite(name);
-});
 
 // The first time a card opens, the right arrow steps out a little to the
 // right and back twice, to show that the cards can be flicked through.
@@ -1378,8 +1359,7 @@ async function stepCard(direction) {
 }
 
 document.getElementById("card-prev").addEventListener("click", () => stepCard(-1));
-document.getElementById("peek-prev").addEventListener("click", () => stepCard(-1));
-document.getElementById("peek-next").addEventListener("click", () => stepCard(1));
+document.getElementById("card-next-ticket").addEventListener("click", () => stepCard(1));
 document.getElementById("card-next").addEventListener("click", () => stepCard(1));
 
 // Swipe left or right on the card to step, and tap the photo to shuffle.
@@ -1457,7 +1437,7 @@ async function intro(onStage, layout) {
   const title = document.getElementById("title");
   const others = onStage.filter((n) => !SIGN_CARRIERS.includes(n));
   const entering = others.map((name) => ({
-    f: makeFigure(name, { ...layout[name], y: 2 }, "resident"),
+    f: Object.assign(makeFigure(name, { ...layout[name], y: 2 }, "resident"), { parked: true }),
     target: layout[name],
   }));
   offstage = offstage.filter((n) => !SIGN_CARRIERS.includes(n));
@@ -1607,6 +1587,7 @@ async function intro(onStage, layout) {
       const side = Math.random() < 0.75 ? near : near === "left" ? "right" : "left";
       f.x = side === "left" ? -w / 2 : 1 + w / 2;
       f.y = entryY();
+      f.parked = false;
       place(f);
       void f.el.offsetWidth;
       await moveTo(f, target.x, target.y, "walk", rand(1500, 2900));
