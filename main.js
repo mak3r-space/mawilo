@@ -1064,6 +1064,16 @@ function showCardPicture(animate = false) {
   }, 315);
 }
 
+// Shrink a long name until it fits on one line of the photo.
+function fitName(el) {
+  el.style.fontSize = "";
+  let size = parseFloat(getComputedStyle(el).fontSize);
+  while (el.scrollWidth > el.clientWidth + 1 && size > 11) {
+    size -= 1;
+    el.style.fontSize = `${size}px`;
+  }
+}
+
 // On the card, a MaWiLo with a trick plays it on a loop.
 let cardTrick = 0;
 
@@ -1087,9 +1097,15 @@ function fillCard(file) {
   cardImg.alt = m.description;
   document.getElementById("card-title").textContent = m.name || m.description;
   document.getElementById("card-title-back").textContent = m.name || m.description;
+  for (const id of ["card-title", "card-title-back"]) fitName(document.getElementById(id));
   document.getElementById("card-description").textContent = m.name ? m.description : "";
   document.getElementById("card-fabrics").textContent = m.fabrics;
   document.getElementById("card-story").textContent = m.story;
+  // The neighbours on each side peek out from behind the photo on phones.
+  const n = MAWILO_DATA.length;
+  const i = MAWILO_DATA.indexOf(m);
+  document.querySelector("#peek-prev img").src = `img/${MAWILO_DATA[(i - 1 + n) % n].file}.png`;
+  document.querySelector("#peek-next img").src = `img/${MAWILO_DATA[(i + 1) % n].file}.png`;
   syncCardAction();
   loopCardTrick(m);
 }
@@ -1194,6 +1210,8 @@ async function stepCard(direction) {
 }
 
 document.getElementById("card-prev").addEventListener("click", () => stepCard(-1));
+document.getElementById("peek-prev").addEventListener("click", () => stepCard(-1));
+document.getElementById("peek-next").addEventListener("click", () => stepCard(1));
 document.getElementById("card-next").addEventListener("click", () => stepCard(1));
 
 // Swipe left or right on the card to step, and tap the photo to shuffle.
@@ -1284,6 +1302,7 @@ async function intro(onStage, layout) {
     const top = titleRestingPlace(title);
     moveTitle(title, top.x, top.y);
     title.classList.add("shown", "floating");
+    document.body.classList.add("footer-in");
     for (const { f, target } of [...entering, ...carriers]) {
       if (!target) {
         leave(f);
@@ -1336,7 +1355,7 @@ async function intro(onStage, layout) {
   requestAnimationFrame(follow);
   // Peek: only the top of the sign comes up, and it waits a moment.
   await moveCarriers(startY - signHeight * 0.85 - 0.02, "walk", 900);
-  await wait(1300);
+  await wait(900);
   // Then a firm march up until the carriers are in view.
   await moveCarriers(walkY, "march", 1800);
   await wait(300);
@@ -1357,6 +1376,7 @@ async function intro(onStage, layout) {
   await wait(650);
   carrying = false;
   title.classList.add("floating");
+  document.body.classList.add("footer-in");
   const top = titleRestingPlace(title);
   moveTitle(title, top.x, top.y);
   title.firstElementChild.animate(
