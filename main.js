@@ -396,6 +396,7 @@ function syncAlbum() {
 }
 
 function openAlbum() {
+  setHash("all");
   syncAlbum();
   album.hidden = false;
   syncInert();
@@ -418,6 +419,7 @@ function openAlbum() {
 async function closeAlbum() {
   if (!album.classList.contains("open")) return;
   album.classList.remove("open");
+  if (!card.classList.contains("open")) setHash("");
   await wait(reducedMotion ? 0 : 300);
   if (!album.classList.contains("open")) album.hidden = true;
   syncInert();
@@ -1259,6 +1261,7 @@ function loopCardTrick(m) {
 function fillCard(file) {
   const m = byFile.get(file);
   cardFile = file;
+  setHash(slug(m));
   showingPhoto = false;
   cardImg.src = `img/${file}.png`;
   document.getElementById("card-img-back").src = `img/photo/${file}.jpg`;
@@ -1317,6 +1320,7 @@ function openCard(file) {
 async function closeCard() {
   if (!card.classList.contains("open")) return;
   card.classList.remove("open");
+  setHash(album.classList.contains("open") ? "all" : "");
   clearInterval(cardTrick);
   returnFocus?.focus?.({ preventScroll: true });
   await wait(reducedMotion ? 0 : 550);
@@ -1610,8 +1614,62 @@ async function intro(onStage, layout) {
   }
 }
 
+// Links: an open card shows its MaWiLo's name in the address, like
+// #madame-diva, and the photo wall shows #all. Opening a card or the wall
+// adds a step to the browser history, so the back button closes it again.
+// Stepping between cards replaces the step instead. A link with a name or
+// #all opens that card or the wall straight away.
+const slug = (m) => m.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const bySlug = new Map(MAWILO_DATA.map((m) => [slug(m), m.file]));
+let routing = false;
+
+function setHash(hash) {
+  if (routing) return;
+  const current = location.hash.slice(1);
+  if (current === hash) return;
+  const url = hash ? `#${hash}` : location.pathname + location.search;
+  // A new card or wall over the board, or a card over the wall, is a new
+  // step. Everything else replaces the current one.
+  const fresh = hash && (!current || (current === "all" && hash !== "all"));
+  if (fresh) {
+    history.pushState({ added: true }, "", url);
+  } else if (history.state?.added && (!hash || (hash === "all" && current !== "all"))) {
+    // Closing goes back over the step that opening added, so the history
+    // has no empty steps left in it.
+    history.back();
+  } else {
+    history.replaceState(history.state, "", url);
+  }
+}
+
+function applyHash() {
+  const hash = decodeURIComponent(location.hash.slice(1));
+  routing = true;
+  try {
+    if (bySlug.has(hash)) {
+      if (card.classList.contains("open")) fillCard(bySlug.get(hash));
+      else openCard(bySlug.get(hash));
+    } else if (hash === "all") {
+      closeCard();
+      if (!album.classList.contains("open")) openAlbum();
+    } else {
+      closeCard();
+      closeAlbum();
+    }
+  } finally {
+    routing = false;
+  }
+}
+
+addEventListener("popstate", applyHash);
+addEventListener("hashchange", applyHash);
+
 async function start() {
   buildAlbum();
+  if (location.hash) {
+    await document.fonts.ready;
+    applyHash();
+  }
   await Promise.all([loadAspects(), document.fonts.ready]);
   const everyone = MAWILO_DATA.map((m) => m.file);
   // Bobble and Ziggy always start on the board, and so do the MaWiLos with

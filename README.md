@@ -15,7 +15,9 @@ Pushing a MaWiLo to the edge of the screen sends it off too.
 Tap the stack to see every MaWiLo on a grid, and tap a photo, or a MaWiLo
 on the board, to open its card. Swipe, use the arrow keys, or tap the
 arrows (the "next" ticket on phones) to go through the cards, and tap the
-card photo to see the original photo.
+card photo to see the original photo. An open card shows the MaWiLo's name in the
+address, like `#madame-diva`, and the grid shows `#all`, so both can be
+shared as links. The back button closes them.
 
 MaWiLos on the board only overlap a little. When one walks in or is
 dragged into a crowd, it bumps the others aside, with a small squish. When
