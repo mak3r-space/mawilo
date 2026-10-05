@@ -684,54 +684,172 @@ function enableDrag(f) {
 }
 
 // Signature moves. Each MaWiLo has one, named by `move` in data.js, and
-// makes it when it arrives and when it is tapped. Each move runs on the
-// image, so it does not disturb the figure's place on the board.
+// makes it when it arrives and when it is tapped. A move is a function of
+// time from 0 to 1 that returns a transform for the image, and an optional
+// pivot. The moves are built from springs: they squash, overshoot and
+// settle. Spins turn around the middle of the MaWiLo, other moves around
+// its feet.
+
+// A spring that starts at full strength and dies away: `wobbles` swings in
+// all, and `fade` is how fast they die down.
+const spring = (t, wobbles, fade) => Math.exp(-fade * t) * Math.sin(2 * Math.PI * wobbles * t);
+const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+// A part of the move from `a` to `b`, as 0 to 1.
+const part = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+
 const SIGNATURE_MOVES = {
-  bounce: [
-    ["translateY(0) scale(1, 1)", "translateY(0) scale(1.08, 0.9)", "translateY(-16%) scale(0.95, 1.06)", "translateY(0) scale(1.05, 0.94)", "translateY(-7%) scale(0.98, 1.02)", "translateY(0) scale(1, 1)"],
-    900,
-  ],
-  hop: [["translateY(0)", "translateY(-12%)", "translateY(0)", "translateY(-5%)", "translateY(0)"], 700],
-  jump: [
-    ["translateY(0) scale(1, 1)", "translateY(4%) scale(1.06, 0.9)", "translateY(-26%) scale(0.96, 1.06)", "translateY(0) scale(1.06, 0.92)", "translateY(0) scale(1, 1)"],
-    800,
-  ],
-  spin: [["rotate(0deg)", "rotate(360deg)"], 800],
-  twirl: [["rotate(0deg) scaleX(1)", "rotate(0deg) scaleX(-1)", "rotate(0deg) scaleX(1)"], 700],
-  flip: [["scaleX(1)", "scaleX(-1)", "scaleX(-1)", "scaleX(1)"], 1100],
-  roll: [["translateX(0) rotate(0deg)", "translateX(12%) rotate(80deg)", "translateX(-6%) rotate(-30deg)", "translateX(0) rotate(0deg)"], 1000],
-  wiggle: [["rotate(0deg)", "rotate(-8deg)", "rotate(7deg)", "rotate(-5deg)", "rotate(3deg)", "rotate(0deg)"], 800],
-  wobble: [["skewX(0deg)", "skewX(-9deg)", "skewX(8deg)", "skewX(-5deg)", "skewX(3deg)", "skewX(0deg)"], 900],
-  shimmy: [["translateX(0)", "translateX(-5%)", "translateX(5%)", "translateX(-5%)", "translateX(5%)", "translateX(0)"], 700],
-  shiver: [["translateX(0)", "translateX(-2%)", "translateX(2%)", "translateX(-2%)", "translateX(2%)", "translateX(-1%)", "translateX(1%)", "translateX(0)"], 600],
-  sway: [["rotate(0deg)", "rotate(-10deg)", "rotate(10deg)", "rotate(0deg)"], 1400],
-  wave: [["rotate(0deg)", "rotate(12deg)", "rotate(-4deg)", "rotate(12deg)", "rotate(0deg)"], 1000],
-  nod: [["rotate(0deg) translateY(0)", "rotate(6deg) translateY(3%)", "rotate(0deg) translateY(0)", "rotate(6deg) translateY(3%)", "rotate(0deg) translateY(0)"], 900],
-  bow: [["rotate(0deg) scaleY(1)", "rotate(14deg) scaleY(0.94)", "rotate(14deg) scaleY(0.94)", "rotate(0deg) scaleY(1)"], 1100],
-  tip: [["rotate(0deg)", "rotate(-12deg)", "rotate(-12deg)", "rotate(0deg)"], 900],
-  stretch: [["scale(1, 1)", "scale(0.92, 1.14)", "scale(0.92, 1.14)", "scale(1.04, 0.96)", "scale(1, 1)"], 1000],
-  stomp: [["translateY(0) rotate(0deg)", "translateY(-6%) rotate(-5deg)", "translateY(0) rotate(0deg)", "translateY(-6%) rotate(5deg)", "translateY(0) rotate(0deg)"], 800],
-  headbang: [["rotate(0deg)", "rotate(10deg)", "rotate(-4deg)", "rotate(10deg)", "rotate(-4deg)", "rotate(0deg)"], 800],
-  flutter: [["scaleX(1)", "scaleX(0.9)", "scaleX(1.06)", "scaleX(0.9)", "scaleX(1.06)", "scaleX(1)"], 700],
+  // Crouch, jump up stretched, and land with a jelly squash.
+  boing: {
+    ms: 1100,
+    at(t) {
+      const crouch = Math.sin(Math.PI * part(t, 0, 0.18)) * 0.14;
+      const air = part(t, 0.18, 0.55);
+      const up = Math.sin(Math.PI * air) * 30;
+      const land = t > 0.55 ? spring(part(t, 0.55, 1), 2.5, 4) * 0.16 : 0;
+      const sy = 1 - crouch + (air > 0 && air < 1 ? 0.08 : 0) - land;
+      return `translateY(${-up}%) scale(${1 + crouch * 0.8 + land}, ${sy})`;
+    },
+  },
+  // Wobble like jelly on the spot.
+  jelly: {
+    ms: 1100,
+    at(t) {
+      const k = spring(t, 4, 3.5) * 0.15;
+      return `scale(${1 + k}, ${1 - k})`;
+    },
+  },
+  // Stretch up tall with a springy overshoot, then settle.
+  stretch: {
+    ms: 1300,
+    at(t) {
+      const k = spring(t, 2.2, 3) * 0.24;
+      return `scale(${1 - k * 0.45}, ${1 + k})`;
+    },
+  },
+  // Jump and spin all the way round in the air, then land with a squash.
+  spinjump: {
+    ms: 1100,
+    origin: "50% 50%",
+    at(t) {
+      const air = part(t, 0, 0.7);
+      const up = Math.sin(Math.PI * air) * 26;
+      const land = t > 0.7 ? spring(part(t, 0.7, 1), 1.5, 4) * 0.12 : 0;
+      return `translateY(${-up}%) rotate(${ease(air) * 360}deg) scale(${1 + land}, ${1 - land})`;
+    },
+  },
+  // Spin round on the spot, puffing up a little half way.
+  twirl: {
+    ms: 1000,
+    origin: "50% 50%",
+    at(t) {
+      const puff = Math.sin(Math.PI * t) * 0.1;
+      return `rotate(${ease(t) * 360}deg) scale(${1 + puff})`;
+    },
+  },
+  // Rock from side to side like a spring toy on a base.
+  wobble: {
+    ms: 1300,
+    at(t) {
+      return `rotate(${spring(t, 3, 3) * 16}deg)`;
+    },
+  },
+  // Three hops, each lower than the last.
+  pogo: {
+    ms: 1200,
+    at(t) {
+      const hop = Math.floor(t * 3);
+      const u = t * 3 - hop;
+      const up = Math.sin(Math.PI * u) * [22, 14, 7][Math.min(hop, 2)];
+      const squash = u < 0.12 || u > 0.88 ? 0.08 : 0;
+      return `translateY(${-up}%) scale(${1 + squash}, ${1 - squash})`;
+    },
+  },
+  // Shake quickly from side to side, faster at first.
+  shake: {
+    ms: 800,
+    at(t) {
+      return `translateX(${spring(t, 6, 4) * 7}%) rotate(${spring(t, 6, 4) * 3}deg)`;
+    },
+  },
+  // Roll a little to one side round the middle and spring back.
+  rock: {
+    ms: 1300,
+    origin: "50% 50%",
+    at(t) {
+      return `translateX(${spring(t, 1.5, 2.5) * 10}%) rotate(${spring(t, 1.5, 2.5) * 30}deg)`;
+    },
+  },
+  // Swing from the top like a pendulum.
+  swing: {
+    ms: 1400,
+    origin: "50% 5%",
+    at(t) {
+      return `rotate(${spring(t, 2, 2.5) * 14}deg)`;
+    },
+  },
+  // Rise up on tiptoe twice, springy.
+  tiptoe: {
+    ms: 1200,
+    at(t) {
+      const lift = Math.abs(Math.sin(2 * Math.PI * t)) * Math.exp(-1.5 * t);
+      return `translateY(${-lift * 8}%) scale(${1 - lift * 0.05}, ${1 + lift * 0.1})`;
+    },
+  },
+  // A heavy bounce, slow and low, for the big ones.
+  bob: {
+    ms: 1400,
+    at(t) {
+      const k = spring(t, 2, 3);
+      return `translateY(${-Math.max(0, k) * 9}%) scale(${1 - k * 0.07}, ${1 + k * 0.07})`;
+    },
+  },
+  // Lean forward in a bow and spring back up.
+  bow: {
+    ms: 1300,
+    at(t) {
+      const down = Math.sin(Math.PI * part(t, 0, 0.5)) * 22;
+      const back = t > 0.5 ? spring(part(t, 0.5, 1), 1.5, 4) * -8 : 0;
+      return `rotate(${down + back}deg)`;
+    },
+  },
+  // Jump, twirl and land with a wobble, all in one.
+  showoff: {
+    ms: 1600,
+    origin: "50% 50%",
+    at(t) {
+      const air = part(t, 0, 0.55);
+      const up = Math.sin(Math.PI * air) * 24;
+      const after = part(t, 0.55, 1);
+      const wob = t > 0.55 ? spring(after, 3, 3.5) * 14 : 0;
+      const land = t > 0.55 ? spring(after, 2.5, 4) * 0.12 : 0;
+      return `translateY(${-up}%) rotate(${ease(air) * 360 + wob}deg) scale(${1 + land}, ${1 - land})`;
+    },
+  },
 };
 
 // Play a MaWiLo's stop-motion trick by swapping its image through the
 // frames in img/frames/, then back to the first one.
+// The trick plays twice at the speed of the original GIF, with a little
+// bounce on each frame.
 function playTrick(f) {
   const count = byFile.get(f.name).frames;
   return new Promise((resolve) => {
-    let i = 1;
+    let shown = 0;
     const step = () => {
-      i += 1;
-      if (i > count || f.state !== "resident") {
+      shown += 1;
+      if (shown > count * 2 || f.state !== "resident") {
         f.img.src = `img/${f.name}.png`;
         resolve();
         return;
       }
-      f.img.src = `img/frames/${f.name}-${i}.png`;
-      setTimeout(step, 450);
+      f.img.src = `img/frames/${f.name}-${((shown) % count) + 1}.png`;
+      f.img.animate(
+        [{ transform: "scale(1, 1)" }, { transform: "scale(1.04, 0.95)" }, { transform: "scale(1, 1)" }],
+        { duration: 260, easing: "ease-out" },
+      );
+      setTimeout(step, 500);
     };
-    setTimeout(step, 100);
+    step();
   });
 }
 
@@ -748,10 +866,12 @@ async function playSignature(f) {
   if (m.move === "trick") {
     await playTrick(f);
   } else {
-    const [frames, duration] = SIGNATURE_MOVES[m.move] || SIGNATURE_MOVES.wiggle;
-    await f.img
-      .animate(frames.map((transform) => ({ transform })), { duration, easing: "ease-in-out" })
-      .finished.catch(() => {});
+    const move = SIGNATURE_MOVES[m.move] || SIGNATURE_MOVES.jelly;
+    const steps = Math.round(move.ms / 25);
+    const frames = Array.from({ length: steps + 1 }, (_, i) => ({ transform: move.at(i / steps) }));
+    f.img.style.transformOrigin = move.origin || "";
+    await f.img.animate(frames, { duration: move.ms, easing: "linear" }).finished.catch(() => {});
+    f.img.style.transformOrigin = "";
   }
   f.moving = false;
 }

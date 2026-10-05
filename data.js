@@ -12,7 +12,7 @@
 const MAWILO_DATA = [
   {
     file: "pink-heart-on-forehead",
-    move: "bounce",
+    move: "boing",
     name: "Herzi",
     description: "Pink, with a heart on its forehead",
     fabrics: "Pink fleece, red heart bead",
@@ -30,7 +30,7 @@ const MAWILO_DATA = [
   },
   {
     file: "green-tartan-pants",
-    move: "shimmy",
+    move: "shake",
     name: "Plaid",
     description: "Green, in tartan pants",
     fabrics: "Green fleece, tartan fleece",
@@ -57,7 +57,7 @@ const MAWILO_DATA = [
   },
   {
     file: "pink-floral-dress-fringe",
-    move: "wave",
+    move: "showoff",
     name: "Rosie",
     description: "Pink, in a floral dress",
     fabrics: "Pink fleece, red floral fleece with fringe",
@@ -66,7 +66,7 @@ const MAWILO_DATA = [
   },
   {
     file: "navy-head-red-knit-body-fringe-hair",
-    move: "headbang",
+    move: "rock",
     name: "Mohawk",
     description: "Navy head, red knit body",
     fabrics: "Navy fleece, red ribbed knit, red fleece fringe",
@@ -75,7 +75,7 @@ const MAWILO_DATA = [
   },
   {
     file: "green-lilac-striped-skirt",
-    move: "spin",
+    move: "twirl",
     name: "Twirl",
     description: "Green, in a lilac striped skirt",
     fabrics: "Green fleece, lilac striped cotton",
@@ -84,7 +84,7 @@ const MAWILO_DATA = [
   },
   {
     file: "lilac-purple-two-tone",
-    move: "flip",
+    move: "jelly",
     name: "Halfie",
     description: "Lilac and purple",
     fabrics: "Lilac and pale pink fleece, purple knit, dark corduroy",
@@ -93,7 +93,7 @@ const MAWILO_DATA = [
   },
   {
     file: "blue-brown-ears-brown-scarf",
-    move: "flutter",
+    move: "swing",
     name: "Batty",
     description: "Blue, with brown ears and a scarf",
     fabrics: "Periwinkle fleece, brown fleece",
@@ -111,7 +111,7 @@ const MAWILO_DATA = [
   },
   {
     file: "teal-head-red-shirt-green-legs",
-    move: "hop",
+    move: "pogo",
     name: "Lolli",
     description: "Teal head, red shirt, green legs",
     fabrics: "Teal fleece, red fleece, embossed green fleece, lace trim",
@@ -120,7 +120,7 @@ const MAWILO_DATA = [
   },
   {
     file: "red-cable-knit-pink-scarf",
-    move: "nod",
+    move: "tiptoe",
     name: "Cable",
     description: "Red cable knit, with a pink scarf",
     fabrics: "Red cable knit, pink satin",
@@ -129,7 +129,7 @@ const MAWILO_DATA = [
   },
   {
     file: "pink-floral-brown-pink-fringe-hair",
-    move: "shiver",
+    move: "stretch",
     name: "Tufty",
     description: "Pink, with fringe hair",
     fabrics: "Embossed pink fleece, brown and pink fleece fringe",
@@ -138,7 +138,7 @@ const MAWILO_DATA = [
   },
   {
     file: "green-body-red-legs-yellow-horn",
-    move: "jump",
+    move: "spinjump",
     name: "Spike",
     description: "Green, with red legs and a yellow horn",
     fabrics: "Green fleece, red fleece, yellow fleece",
@@ -147,7 +147,7 @@ const MAWILO_DATA = [
   },
   {
     file: "pink-red-patchwork-red-green-legs",
-    move: "stomp",
+    move: "pogo",
     name: "Odd Socks",
     description: "Pink and red, with odd legs",
     fabrics: "Pink fleece, red patterned fleece, red knit, green fleece",
@@ -156,7 +156,7 @@ const MAWILO_DATA = [
   },
   {
     file: "light-blue-and-navy-pair-paisley-scarves",
-    move: "sway",
+    move: "wobble",
     name: "The Twins",
     description: "A pair in paisley scarves",
     fabrics: "Light blue fleece, navy fleece, paisley silk",
@@ -174,7 +174,7 @@ const MAWILO_DATA = [
   },
   {
     file: "blue-anteater-shaggy-mane",
-    move: "sway",
+    move: "bob",
     name: "Ellie",
     description: "The blue elephant with a shaggy mane",
     fabrics: "Blue fleece, blue and brown fleece fringe, pearl eye",
@@ -183,7 +183,7 @@ const MAWILO_DATA = [
   },
   {
     file: "teal-blue-curly-hair",
-    move: "shiver",
+    move: "jelly",
     name: "Curly",
     description: "Teal, with curly blue hair",
     fabrics: "Teal fleece, blue curly yarn",
@@ -192,7 +192,7 @@ const MAWILO_DATA = [
   },
   {
     file: "blue-tassels-striped-body",
-    move: "shimmy",
+    move: "shake",
     name: "Bobble",
     description: "Blue, with tassels and stripes",
     fabrics: "Blue fleece, striped knit, yarn tassels, buttons",
@@ -201,7 +201,7 @@ const MAWILO_DATA = [
   },
   {
     file: "blue-striped-dress",
-    move: "jump",
+    move: "boing",
     name: "Ziggy",
     description: "Blue, in a striped dress",
     fabrics: "Blue fleece, orange and cream striped fleece, buttons",
@@ -220,7 +220,7 @@ const MAWILO_DATA = [
   },
   {
     file: "maroon-red-belly",
-    move: "wobble",
+    move: "jelly",
     name: "Plum",
     description: "Maroon, with a red belly",
     fabrics: "Maroon fleece, red velvet, buttons",
@@ -229,7 +229,7 @@ const MAWILO_DATA = [
   },
   {
     file: "pink-round-yarn-hair",
-    move: "roll",
+    move: "rock",
     name: "Hoop",
     description: "Round and pink, with yarn hair",
     fabrics: "Pink fleece, maroon yarn, buttons",
@@ -238,7 +238,7 @@ const MAWILO_DATA = [
   },
   {
     file: "grey-sparkle-ruffle-bib",
-    move: "twirl",
+    move: "showoff",
     name: "Glitter",
     description: "Grey and sparkly, with a ruffle",
     fabrics: "Sparkly grey boucle, salmon ruffle ribbon, buttons",
@@ -256,7 +256,7 @@ const MAWILO_DATA = [
   },
   {
     file: "light-blue-hammerhead",
-    move: "nod",
+    move: "swing",
     name: "Hammer",
     description: "Light blue, with a hammer head",
     fabrics: "Light blue cable knit, buttons",
@@ -265,7 +265,7 @@ const MAWILO_DATA = [
   },
   {
     file: "brown-blue-hat",
-    move: "tip",
+    move: "tiptoe",
     name: "Pointy",
     description: "Brown, with a pointy blue hat",
     fabrics: "Brown corduroy, turquoise fleece, purple frill, buttons",
@@ -274,7 +274,7 @@ const MAWILO_DATA = [
   },
   {
     file: "maroon-elephant-blue-buttons",
-    move: "wave",
+    move: "bob",
     name: "Trunky",
     description: "A maroon elephant",
     fabrics: "Maroon fleece, light blue fleece, buttons",
@@ -283,7 +283,7 @@ const MAWILO_DATA = [
   },
   {
     file: "cream-floral-skirt",
-    move: "spin",
+    move: "twirl",
     name: "Polka",
     description: "Cream, in a flowery skirt",
     fabrics: "Cream fleece, flowery cotton, buttons",
@@ -292,7 +292,7 @@ const MAWILO_DATA = [
   },
   {
     file: "pink-tweed-patchwork",
-    move: "bow",
+    move: "stretch",
     name: "Tweedy",
     description: "Pink tweed patchwork",
     fabrics: "Pink fleece, pink and grey tweed, buttons",
@@ -301,7 +301,7 @@ const MAWILO_DATA = [
   },
   {
     file: "periwinkle-elephant",
-    move: "stomp",
+    move: "bob",
     name: "Jumbo",
     description: "A blue elephant",
     fabrics: "Periwinkle fleece, maroon fleece, buttons",
@@ -310,7 +310,7 @@ const MAWILO_DATA = [
   },
   {
     file: "madame-diva-pearls",
-    move: "twirl",
+    move: "showoff",
     name: "Madame Diva",
     description: "A tall lady in a dark dress",
     fabrics: "White fleece, black lace print fabric, real pearl earrings",
@@ -319,7 +319,7 @@ const MAWILO_DATA = [
   },
   {
     file: "blue-purple-patchwork-swirl",
-    move: "roll",
+    move: "spinjump",
     name: "Swirly",
     description: "Blue and purple patchwork, with a swirl",
     fabrics: "Blue, white, lilac and plum fleece, buttons",
