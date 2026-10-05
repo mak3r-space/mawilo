@@ -1630,11 +1630,23 @@ async function intro(onStage, layout) {
 const slug = (m) => m.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const bySlug = new Map(MAWILO_DATA.map((m) => [slug(m), m.file]));
 let routing = false;
+let counted = "";
+
+// GoatCounter counts the page load by itself. Each card or wall that opens
+// afterwards counts as its own page, like /madame-diva or /all. Closing
+// back to the board is not counted.
+function countView(hash) {
+  if (hash === counted) return;
+  counted = hash;
+  if (!hash) return;
+  window.goatcounter?.count?.({ path: "/" + hash });
+}
 
 function setHash(hash) {
   if (routing) return;
   const current = location.hash.slice(1);
   if (current === hash) return;
+  countView(hash);
   const url = hash ? `#${hash}` : location.pathname + location.search;
   // A new card or wall over the board, or a card over the wall, is a new
   // step. Everything else replaces the current one.
@@ -1652,6 +1664,7 @@ function setHash(hash) {
 
 function applyHash() {
   const hash = decodeURIComponent(location.hash.slice(1));
+  countView(hash);
   routing = true;
   try {
     if (bySlug.has(hash)) {
