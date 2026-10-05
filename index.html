@@ -16,6 +16,10 @@
 <body>
   <h1 class="title" id="title"><span class="title-text">MaWiLos</span></h1>
   <main class="board" id="board" aria-label="MaWiLos you can drag around"></main>
+  <div class="quick" id="quick">
+    <button class="quick-in" id="quick-in" type="button" aria-label="A surprise MaWiLo comes in">come in</button>
+    <button class="quick-bye" id="quick-bye" type="button" aria-label="A surprise MaWiLo says bye">bye</button>
+  </div>
   <button class="box" id="box" type="button">
     <span class="pile" id="box-pile" aria-hidden="true">
       <span class="pile-photo"><img alt="" draggable="false"></span>
@@ -33,10 +37,10 @@
   <div class="card" id="card" role="dialog" aria-modal="true" aria-labelledby="card-title" hidden>
     <button class="card-close" id="card-close" type="button" aria-label="Close">×</button>
     <button class="card-step prev" id="card-prev" type="button" aria-label="Previous MaWiLo">
-      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      <svg viewBox="0 0 14 48" aria-hidden="true"><path d="M11 3L3 24l8 21" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
     </button>
     <button class="card-step next" id="card-next" type="button" aria-label="Next MaWiLo">
-      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      <svg viewBox="0 0 14 48" aria-hidden="true"><path d="M3 3l8 21-8 21" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
     </button>
     <div class="card-picture">
       <div class="card-flip" id="card-flip">

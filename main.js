@@ -244,11 +244,38 @@ const box = document.getElementById("box");
 const boxPile = document.getElementById("box-pile");
 const boxCount = document.getElementById("box-count");
 
-// Where the photo box sits, in pixels. MaWiLos do not start there.
+const quick = document.getElementById("quick");
+const quickIn = document.getElementById("quick-in");
+const quickBye = document.getElementById("quick-bye");
+
+// Where the photo box and the buttons above it sit, in pixels. MaWiLos do
+// not start there.
 function boxRect() {
   const r = box.getBoundingClientRect();
-  return { left: r.left - 8, top: r.top - 8, right: r.right + 8, bottom: r.bottom + 8 };
+  const q = quick.getBoundingClientRect();
+  return {
+    left: Math.min(r.left, q.left) - 8,
+    top: Math.min(r.top, q.top) - 8,
+    right: Math.max(r.right, q.right) + 8,
+    bottom: Math.max(r.bottom, q.bottom) + 8,
+  };
 }
+
+// MaWiLos that "bye" can pick. Bobble and Ziggy stay on the board.
+function byeChoices() {
+  return [...figures.values()].filter((f) => f.state === "resident" && !f.dragging && !SIGN_CARRIERS.includes(f.name));
+}
+
+// The buttons above the box bring in a surprise MaWiLo, or say bye to one.
+quickIn.addEventListener("click", () => {
+  const name = pick(offstage.filter((n) => !figures.has(n)));
+  if (name) invite(name);
+});
+
+quickBye.addEventListener("click", () => {
+  const f = pick(byeChoices());
+  if (f) sendOff(f);
+});
 
 // Show the top three offstage MaWiLos on the pile and how many wait in all.
 function syncBox() {
@@ -261,6 +288,8 @@ function syncBox() {
   });
   boxCount.textContent = String(waiting.length);
   box.classList.toggle("empty", waiting.length === 0);
+  quickIn.disabled = waiting.length === 0;
+  quickBye.disabled = byeChoices().length === 0;
   box.setAttribute("aria-label", `Photo box, ${waiting.length} MaWiLos to meet`);
   if (card.classList.contains("open")) syncCardAction();
   if (album.classList.contains("open")) syncAlbum();
@@ -358,67 +387,12 @@ function centreSpot(name) {
   return validSpot(p, box) ? p : freeSpot(name);
 }
 
-// MaWiLos standing where a newcomer is heading step aside. Each one tries
-// several directions, starting with straight away from the newcomer, and
-// takes the shortest step that clears the newcomer, stays on the board and
-// does not land on another MaWiLo. If no step avoids every other MaWiLo, it
-// takes the shortest step that at least clears the newcomer.
-function makeRoom(name, spot) {
-  const pad = 16;
-  const boxOf = (f) => figureBox(f.name, f.size || 1, f.r);
-  const placed = [{ x: spot.x * innerWidth, y: spot.y * innerHeight, box: figureBox(name, 1, 0), name }];
-  const residents = [...figures.values()].filter(
-    (f) => f.name !== name && f.state === "resident" && !f.dragging,
-  );
-  for (const f of residents) {
-    placed.push({ x: f.x * innerWidth, y: f.y * innerHeight, box: boxOf(f), name: f.name });
-  }
-  const clash = (a, x, y, box) =>
-    Math.abs(x - a.x) < (box.w + a.box.w) / 2 + pad && Math.abs(y - a.y) < (box.h + a.box.h) / 2 + pad;
-
-  let delay = 0;
-  for (const f of residents) {
-    const me = placed.find((p) => p.name === f.name);
-    const newcomer = placed[0];
-    if (!clash(newcomer, me.x, me.y, me.box)) continue;
-    const away = Math.atan2(me.y - newcomer.y, me.x - newcomer.x || (Math.random() - 0.5));
-    let best = null;
-    let fallback = null;
-    for (const turn of [0, 40, -40, 80, -80, 120, -120, 180]) {
-      const angle = away + (turn * Math.PI) / 180;
-      for (let step = 15; step <= 520; step += 15) {
-        const x = me.x + Math.cos(angle) * step;
-        const y = me.y + Math.sin(angle) * step;
-        if (clash(newcomer, x, y, me.box)) continue;
-        if (!validSpot({ x: x / innerWidth, y: y / innerHeight }, me.box)) continue;
-        if (!fallback || step < fallback.step) fallback = { x, y, step };
-        const crowded = placed.some((p) => p !== me && p !== newcomer && clash(p, x, y, me.box));
-        if (!crowded) {
-          if (!best || step < best.step) best = { x, y, step };
-          break;
-        }
-      }
-    }
-    const target = best || fallback;
-    if (!target) continue;
-    me.x = target.x;
-    me.y = target.y;
-    const wait = delay;
-    delay += 120;
-    setTimeout(async () => {
-      if (f.dragging || f.state !== "resident") return;
-      await moveTo(f, target.x / innerWidth, target.y / innerHeight, "walk", 1100);
-    }, wait);
-  }
-}
-
-// Bring a MaWiLo in from offstage. It heads for the middle, the others make
-// room, and its card opens once it has arrived.
+// Bring a MaWiLo in from offstage. It heads for the middle and bumps the
+// others out of the way.
 async function invite(name) {
   const f = figures.get(name);
   if (f?.state === "resident" || f?.state === "leaving") return;
   const spot = centreSpot(name);
-  makeRoom(name, spot);
 
   offstage = offstage.filter((n) => n !== name);
   const g = makeFigure(name, { x: 0.5, y: 2, r: rand(-6, 6), z: ++topZ, size: 1 }, "resident");
@@ -430,11 +404,9 @@ async function invite(name) {
   void g.el.offsetWidth;
   const px = Math.abs(spot.x - g.x) * innerWidth;
   await moveTo(g, spot.x, spot.y, "walk", clamp((px / 160) * 1000, 1400, 3200));
-  // Once it has arrived, it does its signature move and its card opens,
-  // unless someone has already picked it up or sent it away.
-  if (g.state !== "resident" || g.dragging || figures.get(name) !== g) return;
-  await playSignature(g);
-  if (g.state === "resident" && !g.dragging && figures.get(name) === g) openCard(name);
+  // Once it has arrived, it does its signature move, unless someone has
+  // already picked it up or sent it away.
+  if (g.state === "resident" && !g.dragging && figures.get(name) === g) await playSignature(g);
 }
 
 function place(f) {
@@ -801,6 +773,122 @@ function startIdleMoves() {
   setTimeout(tick, 3000);
 }
 
+// Bumping
+
+// MaWiLos on the board do not overlap by more than a little. Every frame,
+// any two that overlap push each other apart, like a collision force in a
+// force layout. A MaWiLo that is walking in or being dragged pushes but is
+// not pushed, so it shoves the others out of its way, and they shove the
+// ones behind them. A MaWiLo that gets pushed gives a small squish.
+
+// Only this much of each MaWiLo's box counts, so a small overlap is fine.
+const SOLID = 0.8;
+// The share of an overlap that is undone in one frame. Lower is softer.
+const STIFFNESS = 0.22;
+
+function solidBox(f) {
+  const r = f.el.getBoundingClientRect();
+  const w = r.width * SOLID;
+  const h = r.height * SOLID;
+  const cx = r.left + r.width / 2;
+  const cy = r.top + r.height / 2;
+  return { cx, cy, w, h, full: r };
+}
+
+function squish(f, horizontal) {
+  const now = performance.now();
+  if (reducedMotion || now - (f.squishedAt || 0) < 600) return;
+  f.squishedAt = now;
+  const squashed = horizontal ? "scale(0.93, 1.05)" : "scale(1.05, 0.93)";
+  f.img.animate([{ transform: "scale(1, 1)" }, { transform: squashed }, { transform: "scale(1, 1)" }], {
+    duration: 380,
+    easing: "ease-out",
+    composite: "add",
+  });
+}
+
+function startBumping() {
+  const step = () => {
+    const bodies = [...figures.values()]
+      .filter((f) => f.state === "resident")
+      .map((f) => ({
+        f,
+        box: solidBox(f),
+        fixed: f.dragging || f.el.classList.contains("walking") || f.el.classList.contains("marching"),
+        dx: 0,
+        dy: 0,
+      }));
+    // The title and the photo box are solid too, but never move.
+    const t = titleRect();
+    const k = boxRect();
+    for (const r of [t, k]) {
+      bodies.push({
+        box: { cx: (r.left + r.right) / 2, cy: (r.top + r.bottom) / 2, w: r.right - r.left, h: r.bottom - r.top },
+        fixed: true,
+        dx: 0,
+        dy: 0,
+      });
+    }
+    for (let i = 0; i < bodies.length; i++) {
+      for (let j = i + 1; j < bodies.length; j++) {
+        const a = bodies[i];
+        const b = bodies[j];
+        if (a.fixed && b.fixed) continue;
+        // Bobble and Ziggy stand close on purpose, and do not push apart.
+        if (a.f && b.f && SIGN_CARRIERS.includes(a.f.name) && SIGN_CARRIERS.includes(b.f.name)) continue;
+        const ox = (a.box.w + b.box.w) / 2 - Math.abs(a.box.cx - b.box.cx);
+        const oy = (a.box.h + b.box.h) / 2 - Math.abs(a.box.cy - b.box.cy);
+        if (ox <= 0 || oy <= 0) continue;
+        // Push apart along the line between their centres, measured against
+        // their sizes, so a crowd spreads out evenly in every direction.
+        let nx = (a.box.cx - b.box.cx) / ((a.box.w + b.box.w) / 2);
+        let ny = (a.box.cy - b.box.cy) / ((a.box.h + b.box.h) / 2);
+        const len = Math.hypot(nx, ny) || 1;
+        if (len < 1e-3) nx = 1;
+        nx /= len;
+        ny /= len;
+        const amount = Math.min(ox, oy) * STIFFNESS * 2;
+        const horizontal = Math.abs(nx) > Math.abs(ny);
+        const shareA = a.fixed ? 0 : b.fixed ? 1 : 0.5;
+        const shareB = 1 - shareA;
+        a.dx += nx * amount * shareA;
+        a.dy += ny * amount * shareA;
+        b.dx -= nx * amount * shareB;
+        b.dy -= ny * amount * shareB;
+        if (amount > 1.2) {
+          if (shareA) squish(a.f, horizontal);
+          if (shareB) squish(b.f, horizontal);
+        }
+      }
+    }
+    // A soft spring keeps Ziggy beside Bobble, wherever the pair is pushed.
+    const [bobble, ziggy] = SIGN_CARRIERS.map((n) => bodies.find((body) => body.f?.name === n));
+    if (bobble && ziggy) {
+      const gap = (bobble.box.w + ziggy.box.w) / 2 / SOLID * 0.88;
+      const ex = bobble.box.cx + gap - ziggy.box.cx;
+      const ey = bobble.box.cy - ziggy.box.cy;
+      const pull = 0.08;
+      const shareB = bobble.fixed ? 0 : ziggy.fixed ? 1 : 0.5;
+      bobble.dx -= ex * pull * shareB;
+      bobble.dy -= ey * pull * shareB;
+      ziggy.dx += ex * pull * (1 - shareB);
+      ziggy.dy += ey * pull * (1 - shareB);
+    }
+    for (const body of bodies) {
+      if (!body.f || (!body.dx && !body.dy)) continue;
+      const { full } = body.box;
+      // Keep every MaWiLo on the screen while it is pushed.
+      const dx = clamp(body.dx, 8 - full.left, innerWidth - 8 - full.right);
+      const dy = clamp(body.dy, TOP_GAP - full.top, innerHeight - 8 - full.bottom);
+      body.f.x += dx / innerWidth;
+      body.f.y += dy / innerHeight;
+      place(body.f);
+    }
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
 // Card
 
 const card = document.getElementById("card");
@@ -897,35 +985,29 @@ function syncCardAction() {
 cardAction.addEventListener("click", async () => {
   const name = cardFile;
   const f = figures.get(name);
-  if (f && f.state !== "leaving") {
-    sendOff(f);
-    syncCardAction();
-    return;
-  }
-  // Step out of the way while the MaWiLo walks in, then come back.
+  // Put the card and the album away first, so the walk can be seen.
   await Promise.all([closeCard(), closeAlbum()]);
-  await invite(name);
+  if (f && f.state !== "leaving") sendOff(f);
+  else invite(name);
 });
 
-// The first time a card opens on a touch screen, its contents slide a
-// little to the left and back, to show that the cards can be flicked.
+// The first time a card opens, the right arrow steps out a little to the
+// right and back twice, to show that the cards can be flicked through.
 let nudged = false;
 
 function nudgeCard() {
-  if (nudged || reducedMotion || !matchMedia("(hover: none)").matches) return;
+  if (nudged || reducedMotion) return;
   nudged = true;
-  const parts = [card.querySelector(".card-picture"), card.querySelector(".card-text")];
-  for (const el of parts) {
-    el.animate(
-      [
-        { transform: "translateX(0)" },
-        { transform: "translateX(-34px)", offset: 0.4 },
-        { transform: "translateX(6px)", offset: 0.75 },
-        { transform: "translateX(0)" },
-      ],
-      { duration: 900, delay: 750, easing: "ease-in-out" },
-    );
-  }
+  document.getElementById("card-next").animate(
+    [
+      { transform: "translateX(0)" },
+      { transform: "translateX(7px)" },
+      { transform: "translateX(0)" },
+      { transform: "translateX(7px)" },
+      { transform: "translateX(0)" },
+    ],
+    { duration: 1200, delay: 900, easing: "ease-in-out" },
+  );
 }
 
 function openCard(file) {
@@ -1216,6 +1298,7 @@ async function start() {
   await intro(onStage, layout);
   document.body.classList.add("ready");
   syncBox();
+  startBumping();
   if (!reducedMotion) startIdleMoves();
 }
 

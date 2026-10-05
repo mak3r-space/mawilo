@@ -9,9 +9,13 @@ fresh.
 The photo stack in the bottom right corner holds a photo of every MaWiLo
 still to meet. Tap it to see all of them on a grid, where a turquoise dot
 marks the ones on the board. Tap a photo to open its card, and swipe or use
-the arrows to go through the cards. "come in" brings a MaWiLo onto the
-board, where it walks to the middle while the others make room, and "bye"
-walks it off again.
+the arrows to go through the cards. "come in" puts the card away and brings
+the MaWiLo onto the board, and "bye" walks it off again. The two buttons
+above the photo stack do the same for a surprise MaWiLo.
+
+MaWiLos on the board only overlap a little. When one walks in or is
+dragged into a crowd, it bumps the others aside, and they bump the ones
+behind them, with a small squish.
 
 Every MaWiLo has a signature move, like a hop, a spin or a bow, set by
 `move` in `data.js`. It makes the move when it arrives and when it is

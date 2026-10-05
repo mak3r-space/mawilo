@@ -149,14 +149,66 @@ body {
   height: 26px;
   padding: 0 6px;
   border-radius: 13px;
-  background: var(--watermelon);
+  background: var(--turquoise);
   color: #fff;
   font: 600 14px/26px "Outfit", system-ui, sans-serif;
   text-align: center;
 }
 
+/* Above the box, two buttons bring in a surprise MaWiLo or say bye to one,
+   in the same colours as the card buttons. */
+.quick {
+  position: fixed;
+  right: 14px;
+  bottom: 128px;
+  z-index: 900;
+  display: flex;
+  gap: 6px;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 600ms ease 400ms;
+}
+
+.ready .quick {
+  visibility: visible;
+  opacity: 1;
+}
+
+.quick button {
+  padding: 4px 12px;
+  border: 2px solid var(--watermelon);
+  border-radius: 999px;
+  font: 600 14px/1.3 "Outfit", system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.quick-in {
+  background: var(--watermelon);
+  color: #fff;
+}
+
+.quick-bye {
+  background: var(--card);
+  color: var(--watermelon);
+}
+
+.quick button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 /* The pile is bigger on large screens. */
 @media (min-width: 900px) {
+  .quick {
+    right: 24px;
+    bottom: 190px;
+  }
+
+  .quick button {
+    padding: 6px 16px;
+    font-size: 15px;
+  }
+
   .box {
     right: 24px;
     bottom: 24px;
@@ -427,7 +479,7 @@ body {
   grid-template-columns: 40% 1fr;
   align-items: center;
   gap: 28px;
-  padding: 32px;
+  padding: 32px 44px 32px 40px;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 20px;
@@ -454,8 +506,17 @@ body {
   padding: 10px 16px 14px 6px;
 }
 
+/* The text column always has the same rows, so the buttons sit in the
+   same place on every card. Only the story scrolls when it is long. */
 .card-text {
-  max-height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  align-self: stretch;
+  min-height: 0;
+  padding-top: 24px;
+}
+
+.card-text .card-story {
   overflow-y: auto;
 }
 
@@ -616,60 +677,52 @@ body {
   z-index: 2;
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  margin-top: -18px;
+  width: 28px;
+  height: 64px;
+  margin-top: -32px;
   padding: 0;
   border: 0;
-  border-radius: 50%;
   background: none;
-  color: var(--muted);
+  color: var(--line);
   cursor: pointer;
+  transition: color 200ms ease;
+}
+
+.card-step svg {
+  width: 14px;
+  height: 48px;
 }
 
 .card-step:hover {
-  color: var(--turquoise);
+  color: var(--muted);
 }
 
 .card-step.prev {
-  left: 2px;
+  left: 6px;
 }
 
 .card-step.next {
-  right: 2px;
-}
-
-/* On touch screens the arrows are small and faint, a hint that the cards
-   can be flicked through. */
-@media (hover: none) {
-  .card-step {
-    width: 26px;
-    opacity: 0.45;
-  }
-
-  .card-step.prev {
-    left: 0;
-  }
-
-  .card-step.next {
-    right: 0;
-  }
+  right: 6px;
 }
 
 @media (max-width: 520px) {
   .card {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
     align-items: start;
-    gap: 16px;
+    gap: 12px;
     bottom: 16px;
     height: min(620px, calc(100dvh - 32px));
-    padding: 24px 30px;
+    padding: 22px 34px;
   }
 
   .card-picture {
     width: min(62%, 30vh);
     justify-self: center;
+  }
+
+  .card-text {
+    padding-top: 0;
   }
 
   .card-photo h2,
