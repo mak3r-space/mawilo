@@ -101,12 +101,12 @@ body {
 }
 
 .ticket {
-  --notch: 7px;
+  --notch: 9px;
   position: relative;
-  padding: 9px 16px 9px 22px;
+  padding: 12px 20px 12px 28px;
   border: 0;
   color: #fff;
-  font: 400 15px/1 "Slackey", "Outfit", system-ui, sans-serif;
+  font: 400 19px/1 "Slackey", "Outfit", system-ui, sans-serif;
   letter-spacing: 0.03em;
   white-space: nowrap;
   cursor: pointer;
@@ -117,7 +117,8 @@ body {
   mask:
     radial-gradient(circle at 0 50%, transparent var(--notch), #000 calc(var(--notch) + 0.5px)) left / 51% 100% no-repeat,
     radial-gradient(circle at 100% 50%, transparent var(--notch), #000 calc(var(--notch) + 0.5px)) right / 51% 100% no-repeat;
-  filter: drop-shadow(0 2px 2px rgb(59 36 22 / 0.2));
+  /* A dark offset shadow, like ink on the printed title. */
+  filter: drop-shadow(2.5px 2.5px 0 var(--ink));
   transition: transform 250ms cubic-bezier(0.34, 1.6, 0.64, 1);
 }
 
@@ -127,7 +128,7 @@ body {
   position: absolute;
   top: 5px;
   bottom: 5px;
-  left: 12px;
+  left: 15px;
   border-left: 1.5px dashed rgb(255 255 255 / 0.7);
 }
 
@@ -437,23 +438,6 @@ body {
   text-overflow: ellipsis;
 }
 
-/* A turquoise dot marks MaWiLos that are on the board. */
-.album-dot {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--turquoise);
-  box-shadow: 0 0 0 2px #fff;
-  display: none;
-}
-
-.album-photo.on-board .album-dot {
-  display: block;
-}
-
 .album-close {
   position: fixed;
   top: 10px;
@@ -637,29 +621,12 @@ body {
   cursor: pointer;
 }
 
+.card-action[hidden] {
+  display: none;
+}
+
 .card-action:hover {
   filter: brightness(1.08);
-}
-
-.card-action.home {
-  background: none;
-  color: var(--watermelon);
-}
-
-.card-toggle {
-  padding: 6px 14px;
-  border: 2px solid var(--turquoise);
-  border-radius: 999px;
-  background: none;
-  color: var(--ink);
-  font: inherit;
-  font-size: 15px;
-  cursor: pointer;
-}
-
-.card-toggle:hover {
-  background: var(--turquoise);
-  color: var(--card);
 }
 
 .card-close {

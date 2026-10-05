@@ -289,7 +289,7 @@ function syncBox() {
 }
 
 // The album lays out a photo of every MaWiLo with its name. Tapping one
-// opens its card. MaWiLos on the board have a turquoise dot.
+// opens its card.
 const album = document.getElementById("album");
 const albumGrid = document.getElementById("album-grid");
 const albumItems = new Map();
@@ -301,7 +301,7 @@ function buildAlbum() {
     item.type = "button";
     item.className = "album-photo";
     item.style.setProperty("--tilt", `${(tilt() - 0.5) * 7}deg`);
-    item.innerHTML = `<img alt="" draggable="false" loading="lazy"><span class="album-name"></span><span class="album-dot" aria-hidden="true"></span>`;
+    item.innerHTML = `<img alt="" draggable="false" loading="lazy"><span class="album-name"></span>`;
     item.querySelector("img").src = `img/${m.file}.png`;
     item.querySelector(".album-name").textContent = m.name;
     item.addEventListener("click", () => openCard(m.file));
@@ -313,7 +313,6 @@ function buildAlbum() {
 function syncAlbum() {
   for (const [name, item] of albumItems) {
     const onBoard = figures.get(name)?.state === "resident";
-    item.classList.toggle("on-board", onBoard);
     item.setAttribute("aria-label", `${byFile.get(name).name}${onBoard ? ", on the board" : ""}`);
   }
 }
@@ -1020,7 +1019,6 @@ function startBumping() {
 
 const card = document.getElementById("card");
 const cardImg = document.getElementById("card-img");
-const cardToggle = document.getElementById("card-toggle");
 let cardFile = null;
 let showingPhoto = false;
 let returnFocus = null;
@@ -1035,7 +1033,6 @@ function showCardPicture(animate = false) {
   const front = document.querySelector(".card-photo.front");
   const back = document.querySelector(".card-photo.back");
   const [top, under] = showingPhoto ? [back, front] : [front, back];
-  cardToggle.textContent = showingPhoto ? "see the cut-out" : "see the photo";
   front.setAttribute("aria-hidden", String(showingPhoto));
   back.setAttribute("aria-hidden", String(!showingPhoto));
   if (!animate || reducedMotion || top.classList.contains("on-top")) {
@@ -1097,16 +1094,14 @@ function fillCard(file) {
   loopCardTrick(m);
 }
 
-// The card button brings an offstage MaWiLo in, or says bye to one on the
-// board.
+// The card button brings in a MaWiLo that is not on the board. It is
+// hidden for the ones already there.
 const cardAction = document.getElementById("card-action");
 
 function syncCardAction() {
   if (!cardFile) return;
   const f = figures.get(cardFile);
-  const onBoard = f && f.state !== "leaving";
-  cardAction.textContent = onBoard ? "bye" : "come in";
-  cardAction.classList.toggle("home", Boolean(onBoard));
+  cardAction.hidden = Boolean(f && f.state !== "leaving");
 }
 
 cardAction.addEventListener("click", async () => {
@@ -1114,8 +1109,7 @@ cardAction.addEventListener("click", async () => {
   const f = figures.get(name);
   // Put the card and the album away first, so the walk can be seen.
   await Promise.all([closeCard(), closeAlbum()]);
-  if (f && f.state !== "leaving") sendOff(f);
-  else invite(name);
+  if (!f) invite(name);
 });
 
 // The first time a card opens, the right arrow steps out a little to the
@@ -1161,7 +1155,6 @@ function shufflePhotos() {
   showCardPicture(true);
 }
 
-cardToggle.addEventListener("click", shufflePhotos);
 
 // Step to the previous or next MaWiLo's card, in the order of the line,
 // going round at the ends. The card's contents slide out one way and the

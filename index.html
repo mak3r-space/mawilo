@@ -17,10 +17,6 @@
   <h1 class="title" id="title"><span class="title-text">MaWiLos</span></h1>
   <main class="board" id="board" aria-label="MaWiLos you can drag around"></main>
   <footer class="footer">
-    <div class="quick" id="quick">
-      <button class="ticket quick-in" id="quick-in" type="button" aria-label="A surprise MaWiLo comes in"><span>come in</span></button>
-      <button class="ticket quick-bye" id="quick-bye" type="button" aria-label="A surprise MaWiLo says bye"><span>bye</span></button>
-    </div>
     <button class="box" id="box" type="button">
       <span class="pile" id="box-pile" aria-hidden="true">
         <span class="pile-photo"><img alt="" draggable="false"></span>
@@ -29,6 +25,10 @@
       </span>
       <span class="box-count" id="box-count" aria-hidden="true"></span>
     </button>
+    <div class="quick" id="quick">
+      <button class="ticket quick-in" id="quick-in" type="button" aria-label="A surprise MaWiLo comes in"><span>come in</span></button>
+      <button class="ticket quick-bye" id="quick-bye" type="button" aria-label="A surprise MaWiLo says bye"><span>bye</span></button>
+    </div>
   </footer>
 
   <div class="album" id="album" role="dialog" aria-modal="true" aria-label="All MaWiLos" hidden>
@@ -62,7 +62,6 @@
       <p class="card-fabrics" id="card-fabrics"></p>
       <div class="card-buttons">
         <button class="card-action" id="card-action" type="button">come in</button>
-        <button class="card-toggle" id="card-toggle" type="button">see the photo</button>
       </div>
     </div>
   </div>
