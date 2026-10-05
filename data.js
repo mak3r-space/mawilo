@@ -211,11 +211,11 @@ const MAWILO_DATA = [
   {
     file: "purple-flowers-tongue",
     move: "trick",
-    name: "Blep",
+    name: "Julia",
     description: "Purple and flowery, with a tongue",
     fabrics: "Embossed purple fleece, pink and red fleece, flower buttons",
     story:
-      "Blep sticks out a tongue at everyone, but only to say hello. The tongue goes left, then right, then up, and nobody can stop it. Blep was very proud to be in a moving picture.",
+      "Julia sticks out her tongue at everyone, but only to say hello. The tongue goes left, then right, then up, and nobody can stop it. She once said \"Get out of my way, it's time for Creative Collective!\" and nobody has argued since.",
     frames: 4,
   },
   {

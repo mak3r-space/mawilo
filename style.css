@@ -6,6 +6,7 @@
   --line: #e6d9c6;
   --watermelon: #f0607a;
   --turquoise: #36c2c0;
+  /* Keep in step with figureSize() in main.js. */
   --size: min(19vh, 23vw);
 }
 
@@ -136,10 +137,21 @@ body {
 
 /* "come in" is the main ticket and a little bigger. */
 .quick-in {
+  display: flex;
+  align-items: center;
+  gap: 16px;
   background: var(--watermelon);
   font-size: 20px;
-  padding: 13px 22px 13px 30px;
+  padding: 13px 22px 13px 16px;
   transform: rotate(-4deg);
+}
+
+.quick-in::before {
+  left: calc(16px + var(--stub, 16px) + 7px);
+}
+
+.quick-in.all-here::before {
+  display: none;
 }
 
 .quick-bye {
@@ -161,7 +173,7 @@ body {
 }
 
 .ticket:disabled {
-  opacity: 0.35;
+  opacity: 0.45;
   cursor: default;
 }
 
@@ -179,6 +191,18 @@ body {
 
 .box.empty .pile-photo {
   opacity: 0.4;
+}
+
+/* The count of MaWiLos still to meet sits on the stub of the "come in"
+   ticket, left of the tear line, like a ticket number. */
+.ticket-number {
+  font: 600 12px/1 "Outfit", system-ui, sans-serif;
+  letter-spacing: 0;
+  opacity: 0.9;
+}
+
+.ticket-number[hidden] {
+  display: none;
 }
 
 .pile {
@@ -230,20 +254,6 @@ body {
 
 .box:hover .pile-photo:nth-child(3) {
   transform: rotate(-2deg) translateY(-6px);
-}
-
-.box-count {
-  position: absolute;
-  right: 0;
-  top: 0;
-  min-width: 26px;
-  height: 26px;
-  padding: 0 6px;
-  border-radius: 13px;
-  background: var(--turquoise);
-  color: #fff;
-  font: 600 14px/26px "Outfit", system-ui, sans-serif;
-  text-align: center;
 }
 
 .box:focus-visible {
@@ -482,7 +492,10 @@ body {
 
 /* Card */
 
+/* Horizontal swipes on the card step to the next MaWiLo, and vertical ones
+   still scroll a long story. */
 .card {
+  touch-action: pan-y;
   position: fixed;
   left: 50%;
   bottom: 24px;
@@ -537,6 +550,7 @@ body {
 }
 
 .card-flip {
+  cursor: pointer;
   position: relative;
 }
 
@@ -620,7 +634,7 @@ body {
   gap: 10px;
 }
 
-/* The main card button brings a MaWiLo in, or says bye to one. */
+/* The card button brings in a MaWiLo that is not on the board. */
 .card-action {
   padding: 6px 16px;
   border: 2px solid var(--watermelon);
@@ -659,17 +673,8 @@ body {
   color: var(--watermelon);
 }
 
-/* Tapping the photo shuffles it. Horizontal swipes on the card step to
-   the next MaWiLo, and vertical ones still scroll a tall card. */
-.card {
-  touch-action: pan-y;
-}
-
-.card-flip {
-  cursor: pointer;
-}
-
-/* Arrow buttons for stepping, on screens with a mouse. */
+/* Arrow buttons for stepping. Phones show the neighbours peeking out
+   instead. */
 .card-step {
   position: absolute;
   top: 50%;

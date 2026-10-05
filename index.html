@@ -23,11 +23,10 @@
         <span class="pile-photo"><img alt="" draggable="false"></span>
         <span class="pile-photo"><img alt="" draggable="false"></span>
       </span>
-      <span class="box-count" id="box-count" aria-hidden="true"></span>
     </button>
-    <div class="quick" id="quick">
-      <button class="ticket quick-in" id="quick-in" type="button" aria-label="A surprise MaWiLo comes in"><span>come in</span></button>
-      <button class="ticket quick-bye" id="quick-bye" type="button" aria-label="A surprise MaWiLo says bye"><span>bye</span></button>
+    <div class="quick">
+      <button class="ticket quick-in" id="quick-in" type="button" aria-label="come in, a surprise MaWiLo"><span class="ticket-number" id="box-count"></span><span class="ticket-text">come in</span></button>
+      <button class="ticket quick-bye" id="quick-bye" type="button" aria-label="bye, to a surprise MaWiLo"><span>bye</span></button>
     </div>
   </footer>
 
@@ -47,7 +46,7 @@
     <div class="card-picture">
       <button class="peek prev" id="peek-prev" type="button" aria-label="Previous MaWiLo"><img alt="" draggable="false"></button>
       <button class="peek next" id="peek-next" type="button" aria-label="Next MaWiLo"><img alt="" draggable="false"></button>
-      <div class="card-flip" id="card-flip">
+      <div class="card-flip" id="card-flip" role="button" tabindex="0" aria-label="Shuffle the photos">
         <figure class="card-photo front on-top">
           <img id="card-img" alt="">
           <h2 id="card-title"></h2>
