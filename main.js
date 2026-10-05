@@ -335,7 +335,10 @@ function syncStack() {
   const order = (n) => (offstage.includes(n) ? offstage.indexOf(n) : Infinity);
   waiting.sort((a, b) => order(a) - order(b));
   // The photo on top of the pile, the last one, is the next to come in.
-  const shown = waiting.slice(0, 3).reverse();
+  // With everyone on the board, the stack still shows a few photos, so it
+  // can be tapped to see them all on the wall.
+  const pile = waiting.length ? waiting : MAWILO_DATA.map((m) => m.file);
+  const shown = pile.slice(0, 3).reverse();
   const photos = [...stackPile.querySelectorAll(".pile-photo")];
   const showPile = () =>
     photos.forEach((el, i) => {
