@@ -247,6 +247,18 @@ function scatterLayout(names) {
 
 // Footer: the photo stack and the tickets
 
+// The footer is a little bigger on large screens, and shrinks to fit on
+// narrow phones, so the stack and both tickets are always fully on screen.
+const footer = document.querySelector(".footer");
+
+function fitFooter() {
+  const wanted = innerWidth >= 900 ? 1.3 : 1;
+  const fits = (innerWidth - 16) / footer.offsetWidth;
+  footer.style.transform = `translateX(-50%) scale(${Math.min(wanted, fits).toFixed(3)})`;
+}
+
+addEventListener("resize", fitFooter);
+
 // Room left free at the top of the screen, above the title. Phones get
 // more, so the title clears the notch and the status bar.
 const TOP_GAP = matchMedia("(max-width: 640px)").matches ? 40 : 14;
@@ -261,7 +273,7 @@ const quickBye = document.getElementById("quick-bye");
 // Where the footer with the tickets and the photo stack sits, in pixels.
 // MaWiLos do not start there and are not pushed onto it.
 function boxRect() {
-  const r = document.querySelector(".footer").getBoundingClientRect();
+  const r = footer.getBoundingClientRect();
   return { left: r.left - 8, top: r.top - 8, right: r.right + 8, bottom: r.bottom + 8 };
 }
 
@@ -274,14 +286,14 @@ function byeChoices() {
 
 // The buttons above the box bring in a surprise MaWiLo, or say bye to one.
 quickIn.addEventListener("click", () => {
-  if (!document.body.classList.contains("ready")) return;
+  if (!document.body.classList.contains("footer-in")) return;
   // The ticket brings in the MaWiLo on top of the photo stack.
   const name = offstage.find((n) => !figures.has(n));
   if (name) invite(name);
 });
 
 quickBye.addEventListener("click", () => {
-  if (!document.body.classList.contains("ready")) return;
+  if (!document.body.classList.contains("footer-in")) return;
   const f = pick(byeChoices());
   if (f) sendOff(f);
 });
@@ -336,6 +348,7 @@ function syncBox() {
   // so instead.
   quickIn.querySelector(".ticket-text").textContent = waiting.length ? "come in" : "all here!";
   quickIn.classList.toggle("all-here", waiting.length === 0);
+  fitFooter();
   quickIn.setAttribute("aria-label", waiting.length ? `come in, ${waiting.length} MaWiLos to meet` : "all here");
   box.classList.toggle("empty", waiting.length === 0);
   quickIn.disabled = waiting.length === 0;
@@ -446,10 +459,18 @@ function entryY() {
 
 // Bring a MaWiLo in from offstage. It heads for the middle and bumps the
 // others out of the way.
+// Arrivals that start while another is still walking in.
+let arriving = 0;
+let lastInvite = 0;
+
 async function invite(name) {
   const f = figures.get(name);
   if (f?.state === "resident" || f?.state === "leaving") return;
-  const spot = centreSpot(name);
+  // A lone arrival heads for the middle. When several come in quickly, each
+  // takes the freest spot, so they do not all shove for the middle.
+  const spot = arriving ? freeSpot(name) : centreSpot(name);
+  arriving += 1;
+  const invitedAt = (lastInvite = performance.now());
 
   offstage = offstage.filter((n) => n !== name);
   const g = makeFigure(name, { x: 0.5, y: 2, r: rand(-6, 6), size: 1 }, "resident");
@@ -462,9 +483,12 @@ async function invite(name) {
   void g.el.offsetWidth;
   const px = Math.abs(spot.x - g.x) * innerWidth;
   await moveTo(g, spot.x, spot.y, "walk", clamp((px / 160) * 1000, 1400, 3200));
+  arriving -= 1;
   // Once it has arrived, it does its signature move, unless someone has
-  // already picked it up or sent it away.
-  if (g.state === "resident" && !g.dragging && figures.get(name) === g) await playSignature(g);
+  // already picked it up or sent it away. In a quick run of arrivals only
+  // the last one does.
+  const latest = lastInvite === invitedAt;
+  if (latest && g.state === "resident" && !g.dragging && figures.get(name) === g) await playSignature(g);
 }
 
 // Perspective: a MaWiLo higher up the screen is further away, so it is
@@ -670,7 +694,7 @@ function enableDrag(f) {
   );
 
   f.el.addEventListener("pointerdown", (event) => {
-    if (f.state === "leaving" || !document.body.classList.contains("ready")) return;
+    if (f.state === "leaving" || !document.body.classList.contains("footer-in")) return;
     event.preventDefault();
     // A second finger is part of a pinch, not a new grab, whether it lands
     // on the same MaWiLo or another one.
@@ -994,14 +1018,27 @@ function startIdleMoves() {
 // ones behind them. A MaWiLo that gets pushed gives a small squish.
 
 // Only this much of each MaWiLo's box counts, so a small overlap is fine.
+// When the board is too crowded for everyone to fit, less of each box
+// counts, so the crowd overlaps more and settles instead of shoving.
 const SOLID = 0.8;
+let solid = SOLID;
+
+function crowdSolid(bodies) {
+  const t = titleRect();
+  const k = boxRect();
+  const free =
+    innerWidth * innerHeight - (t.right - t.left) * (t.bottom - t.top) - (k.right - k.left) * (k.bottom - k.top);
+  const used = bodies.reduce((sum, b) => sum + b.full.width * b.full.height, 0);
+  if (!used) return SOLID;
+  return clamp(Math.sqrt((free * 0.5) / used), 0.45, SOLID);
+}
 // The share of an overlap that is undone in one frame. Lower is softer.
 const STIFFNESS = 0.22;
 
 function solidBox(f) {
   const r = f.el.getBoundingClientRect();
-  const w = r.width * SOLID;
-  const h = r.height * SOLID;
+  const w = r.width * solid;
+  const h = r.height * solid;
   const cx = r.left + r.width / 2;
   const cy = r.top + r.height / 2;
   return { cx, cy, w, h, full: r };
@@ -1033,6 +1070,17 @@ addEventListener("resize", () => {
   }
 });
 
+// Once the footer is in, the tickets and the MaWiLos can be used, and the
+// bumping starts, even if the intro is still finishing.
+let footerOpen = false;
+
+function openFooter() {
+  if (footerOpen) return;
+  footerOpen = true;
+  document.body.classList.add("footer-in");
+  startBumping();
+}
+
 function startBumping() {
   const step = () => {
     const bodies = [...figures.values()]
@@ -1044,6 +1092,11 @@ function startBumping() {
         dx: 0,
         dy: 0,
       }));
+    solid = crowdSolid(bodies.map((b) => b.box));
+    for (const b of bodies) {
+      b.box.w = b.box.full.width * solid;
+      b.box.h = b.box.full.height * solid;
+    }
     // The title and the photo box are solid too, but never move.
     const t = titleRect();
     const k = boxRect();
@@ -1064,7 +1117,9 @@ function startBumping() {
         if (a.f && b.f && SIGN_CARRIERS.includes(a.f.name) && SIGN_CARRIERS.includes(b.f.name)) continue;
         const ox = (a.box.w + b.box.w) / 2 - Math.abs(a.box.cx - b.box.cx);
         const oy = (a.box.h + b.box.h) / 2 - Math.abs(a.box.cy - b.box.cy);
-        if (ox <= 0 || oy <= 0) continue;
+        // Ignore overlaps of a pixel or two, so a crowd comes to rest
+        // instead of jiggling.
+        if (ox <= 2 || oy <= 2) continue;
         // Push apart along the line between their centres, measured against
         // their sizes, so a crowd spreads out evenly in every direction.
         let nx = (a.box.cx - b.box.cx) / ((a.box.w + b.box.w) / 2);
@@ -1090,7 +1145,7 @@ function startBumping() {
     // A soft spring keeps Ziggy beside Bobble, wherever the pair is pushed.
     const [bobble, ziggy] = SIGN_CARRIERS.map((n) => bodies.find((body) => body.f?.name === n));
     if (bobble && ziggy) {
-      const gap = (bobble.box.w + ziggy.box.w) / 2 / SOLID * 0.88;
+      const gap = (bobble.box.w + ziggy.box.w) / 2 / solid * 0.88;
       const ex = bobble.box.cx + gap - ziggy.box.cx;
       const ey = bobble.box.cy - ziggy.box.cy;
       const pull = 0.08;
@@ -1434,7 +1489,7 @@ async function intro(onStage, layout) {
     const top = titleRestingPlace(title);
     moveTitle(title, top.x, top.y);
     title.classList.add("shown", "floating");
-    document.body.classList.add("footer-in");
+    openFooter();
     for (const { f, target } of [...entering, ...carriers]) {
       if (!target) {
         leave(f);
@@ -1538,7 +1593,7 @@ async function intro(onStage, layout) {
   // side but sometimes from the far one, each at its own pace.
   // The footer comes in once Bobble and Ziggy have walked away from the
   // bottom of the screen.
-  Promise.all(carriersDone).then(() => document.body.classList.add("footer-in"));
+  Promise.all(carriersDone).then(openFooter);
 
   const order = shuffle(entering);
   let start = 0;
@@ -1585,7 +1640,6 @@ async function start() {
   await intro(onStage, layout);
   document.body.classList.add("ready");
   syncBox();
-  startBumping();
   if (!reducedMotion) startIdleMoves();
 }
 

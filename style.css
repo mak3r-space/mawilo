@@ -89,7 +89,6 @@ body {
 @media (min-width: 900px) {
   .footer {
     bottom: 18px;
-    transform: translateX(-50%) scale(1.3);
   }
 }
 
@@ -195,7 +194,11 @@ body {
 
 /* The count of MaWiLos still to meet sits on the stub of the "come in"
    ticket, left of the tear line, like a ticket number. */
+/* The number keeps one width, so the ticket does not change size as the
+   count goes from two digits to one. */
 .ticket-number {
+  min-width: 1.5em;
+  text-align: center;
   font: 600 12px/1 "Outfit", system-ui, sans-serif;
   letter-spacing: 0;
   opacity: 0.9;
