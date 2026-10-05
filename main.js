@@ -307,9 +307,10 @@ ticketBye.addEventListener("click", () => {
   if (f) sendOff(f);
 });
 
-// When the top photo changes, it slides out to the side and the next one
-// comes forward, like the shuffle on the cards. The new photos are put in
-// half way, while the top one is out of the way.
+// When the top photo changes, it lifts up and tips to the side and the next
+// one comes forward, like the shuffle on the cards. It moves up, not left,
+// so it stays on screen on a phone, where the stack sits at the edge. The
+// new photos are put in half way, while the top one is out of the way.
 let pileTop;
 
 function shufflePile(showPile) {
@@ -318,7 +319,7 @@ function shufflePile(showPile) {
   top.animate(
     [
       { translate: "0 0", rotate: "0deg" },
-      { translate: "-46px 4px", rotate: "-16deg", offset: 0.45 },
+      { translate: "14px -38px", rotate: "12deg", offset: 0.45 },
       { translate: "0 0", rotate: "0deg" },
     ],
     { duration: 620, easing: "ease-in-out", composite: "add" },
