@@ -6,18 +6,18 @@ around to arrange them the way you like: drag from the middle, turn by the
 edges, and pinch or scroll to resize. Nothing is saved, so a reload starts
 fresh.
 
-The photo box in the bottom right corner holds a photo of every MaWiLo
-still to meet. Tap it to open the cards, and swipe or use the arrows to go
-through them. "invite in" brings a MaWiLo onto the board, where it walks to
-the middle and the others make room, and "send home" walks it off again.
-Tap a MaWiLo on the board to open its card, and tap the card photo to see
-the original photo.
+The photo stack in the bottom right corner holds a photo of every MaWiLo
+still to meet. Tap it to see all of them on a grid, where a turquoise dot
+marks the ones on the board. Tap a photo to open its card, and swipe or use
+the arrows to go through the cards. "come in" brings a MaWiLo onto the
+board, where it walks to the middle while the others make room, and "bye"
+walks it off again.
 
-Blep and Moustachio do their stop-motion tricks now and then, and on their
-cards.
-
-Now and then one MaWiLo on the board does a small move, like a wiggle or
-a hop, to invite play.
+Every MaWiLo has a signature move, like a hop, a spin or a bow, set by
+`move` in `data.js`. It makes the move when it arrives and when it is
+tapped, and then its card opens. Blep and Moustachio do their stop-motion
+tricks instead. Now and then one MaWiLo breathes or wiggles a little to
+invite play.
 
 If the browser asks for reduced motion, nothing moves on its own.
 

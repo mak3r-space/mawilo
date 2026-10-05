@@ -72,13 +72,20 @@ body {
   background: none;
   cursor: pointer;
   visibility: hidden;
-  transform: translateY(160px);
-  transition: transform 900ms cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+/* The pile slides up into the corner once the intro is done. */
+.box > * {
+  translate: 0 160px;
+  transition: translate 900ms cubic-bezier(0.34, 1.3, 0.64, 1);
 }
 
 .ready .box {
   visibility: visible;
-  transform: none;
+}
+
+.ready .box > * {
+  translate: 0 0;
 }
 
 .box.empty .pile-photo {
@@ -148,6 +155,16 @@ body {
   text-align: center;
 }
 
+/* The pile is bigger on large screens. */
+@media (min-width: 900px) {
+  .box {
+    right: 24px;
+    bottom: 24px;
+    transform-origin: 100% 100%;
+    scale: 1.45;
+  }
+}
+
 .box:focus-visible {
   outline: 2px solid var(--turquoise);
   outline-offset: 4px;
@@ -184,7 +201,7 @@ body {
 
 /* Lift a little under the mouse. */
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .mawilo:hover:not(.lifted, .turning, .walking, .marching, .popping, .sinking) {
+  .mawilo:hover:not(.lifted, .turning, .walking, .marching) {
     transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(1.025);
   }
 
@@ -285,17 +302,114 @@ body {
   }
 }
 
-/* Popping up from or down to the bottom edge, with a small overshoot. */
-.mawilo.popping {
-  transition:
-    top var(--dur) cubic-bezier(0.34, 1.3, 0.64, 1),
-    transform 500ms ease;
+/* Album: every MaWiLo as a small instant photo with its name, laid out on
+   a grid over the board. */
+.album {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  overflow-y: auto;
+  padding: 56px 16px 32px;
+  background: rgb(247 241 232 / 0.97);
+  opacity: 0;
+  transition: opacity 300ms ease;
 }
 
-.mawilo.sinking {
-  transition:
-    top var(--dur) cubic-bezier(0.55, 0, 0.75, 0.3),
-    transform 500ms ease;
+.album.open {
+  opacity: 1;
+}
+
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 22px 16px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.album-photo {
+  position: relative;
+  padding: 7px 7px 0;
+  border: 0;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(59 36 22 / 0.16);
+  transform: rotate(var(--tilt, 0deg));
+  cursor: pointer;
+  transition: transform 250ms cubic-bezier(0.34, 1.4, 0.64, 1), box-shadow 250ms ease;
+}
+
+.album-photo:hover,
+.album-photo:focus-visible {
+  transform: rotate(0deg) scale(1.06);
+  box-shadow: 0 8px 18px rgb(59 36 22 / 0.22);
+  outline: none;
+}
+
+.album-photo img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: #f3ebde;
+}
+
+.album-name {
+  display: block;
+  padding: 6px 2px 9px;
+  font-family: "Slackey", "Outfit", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.2;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A turquoise dot marks MaWiLos that are on the board. */
+.album-dot {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--turquoise);
+  box-shadow: 0 0 0 2px #fff;
+  display: none;
+}
+
+.album-photo.on-board .album-dot {
+  display: block;
+}
+
+.album-close {
+  position: fixed;
+  top: 10px;
+  right: 12px;
+  z-index: 1;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.album-close:hover {
+  color: var(--watermelon);
+}
+
+@media (max-width: 520px) {
+  .album-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px 12px;
+  }
+
+  .album-name {
+    font-size: 13px;
+  }
 }
 
 /* Card */
@@ -306,8 +420,9 @@ body {
   bottom: 24px;
   z-index: 2000;
   width: min(820px, calc(100% - 32px));
-  max-height: calc(100dvh - 48px);
-  overflow-y: auto;
+  /* Every card has the same height, so stepping through them does not make
+     the card jump. A long story scrolls inside the card. */
+  height: min(440px, calc(100dvh - 48px));
   display: grid;
   grid-template-columns: 40% 1fr;
   align-items: center;
@@ -337,6 +452,11 @@ body {
    tilted the other way so it peeks out. */
 .card-picture {
   padding: 10px 16px 14px 6px;
+}
+
+.card-text {
+  max-height: 100%;
+  overflow-y: auto;
 }
 
 .card-flip {
@@ -423,7 +543,7 @@ body {
   gap: 10px;
 }
 
-/* The main card button invites a MaWiLo in, or sends one home. */
+/* The main card button brings a MaWiLo in, or says bye to one. */
 .card-action {
   padding: 6px 16px;
   border: 2px solid var(--watermelon);
@@ -519,19 +639,32 @@ body {
   right: 2px;
 }
 
+/* On touch screens the arrows are small and faint, a hint that the cards
+   can be flicked through. */
 @media (hover: none) {
   .card-step {
-    display: none;
+    width: 26px;
+    opacity: 0.45;
+  }
+
+  .card-step.prev {
+    left: 0;
+  }
+
+  .card-step.next {
+    right: 0;
   }
 }
 
 @media (max-width: 520px) {
   .card {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    align-items: start;
     gap: 16px;
     bottom: 16px;
-    max-height: calc(100dvh - 32px);
-    padding: 24px;
+    height: min(620px, calc(100dvh - 32px));
+    padding: 24px 30px;
   }
 
   .card-picture {
@@ -545,7 +678,7 @@ body {
     padding: 8px 4px 10px;
   }
 
-    .card-story {
+  .card-story {
     font-size: 17px;
   }
 }
@@ -555,13 +688,12 @@ body {
   .mawilo.lifted,
   .mawilo.walking,
   .mawilo.marching,
-  .mawilo.popping,
-  .mawilo.sinking,
   .mawilo.turning,
   .card,
   .card.open,
   .title.floating,
-  .box {
+  .box > *,
+  .album {
     transition: none;
   }
 

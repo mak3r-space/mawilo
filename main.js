@@ -33,7 +33,6 @@ const byFile = new Map(MAWILO_DATA.map((m) => [m.file, m]));
 const board = document.getElementById("board");
 const figures = new Map();
 let offstage = [];
-let waiting = null;
 let topZ = 1;
 
 function clamp(v, min, max) {
@@ -219,8 +218,9 @@ function scatterLayout(names) {
 
 // Photo box
 
-// Room left free at the top of the screen, above the title.
-const TOP_GAP = 12;
+// Room left free at the top of the screen, above the title. Phones get
+// more, so the title clears the notch and the status bar.
+const TOP_GAP = matchMedia("(max-width: 640px)").matches ? 40 : 14;
 
 const box = document.getElementById("box");
 const boxPile = document.getElementById("box-pile");
@@ -245,22 +245,76 @@ function syncBox() {
   box.classList.toggle("empty", waiting.length === 0);
   box.setAttribute("aria-label", `Photo box, ${waiting.length} MaWiLos to meet`);
   if (card.classList.contains("open")) syncCardAction();
+  if (album.classList.contains("open")) syncAlbum();
 }
 
+// The album lays out a photo of every MaWiLo with its name. Tapping one
+// opens its card. MaWiLos on the board have a turquoise dot.
+const album = document.getElementById("album");
+const albumGrid = document.getElementById("album-grid");
+const albumItems = new Map();
+
+function buildAlbum() {
+  const tilt = seededRandom(5);
+  for (const m of MAWILO_DATA) {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "album-photo";
+    item.style.setProperty("--tilt", `${(tilt() - 0.5) * 7}deg`);
+    item.innerHTML = `<img alt="" draggable="false" loading="lazy"><span class="album-name"></span><span class="album-dot" aria-hidden="true"></span>`;
+    item.querySelector("img").src = `img/${m.file}.png`;
+    item.querySelector(".album-name").textContent = m.name;
+    item.addEventListener("click", () => openCard(m.file));
+    albumGrid.append(item);
+    albumItems.set(m.file, item);
+  }
+}
+
+function syncAlbum() {
+  for (const [name, item] of albumItems) {
+    const onBoard = figures.get(name)?.state === "resident";
+    item.classList.toggle("on-board", onBoard);
+    item.setAttribute("aria-label", `${byFile.get(name).name}${onBoard ? ", on the board" : ""}`);
+  }
+}
+
+function openAlbum() {
+  syncAlbum();
+  album.hidden = false;
+  void album.offsetWidth;
+  album.classList.add("open");
+  if (!reducedMotion) {
+    [...albumItems.values()].forEach((item, i) => {
+      item.animate(
+        [
+          { transform: "translateY(24px) scale(0.9)", opacity: 0 },
+          { transform: "none", opacity: 1 },
+        ],
+        { duration: 350, delay: Math.min(i * 18, 500), easing: "ease-out", fill: "backwards" },
+      );
+    });
+  }
+  document.getElementById("album-close").focus({ preventScroll: true });
+}
+
+async function closeAlbum() {
+  if (!album.classList.contains("open")) return;
+  album.classList.remove("open");
+  await wait(reducedMotion ? 0 : 300);
+  if (!album.classList.contains("open")) album.hidden = true;
+}
+
+document.getElementById("album-close").addEventListener("click", closeAlbum);
+
 box.addEventListener("click", () => {
-  const first = offstage.find((n) => !figures.has(n)) || MAWILO_DATA[0].file;
   if (!reducedMotion) {
     boxPile.animate(
       [{ transform: "rotate(0deg)" }, { transform: "rotate(-6deg)" }, { transform: "rotate(4deg)" }, { transform: "rotate(0deg)" }],
       { duration: 500, easing: "ease-out" },
     );
   }
-  openCard(first);
+  openAlbum();
 });
-
-function exitEdge(f) {
-  return byFile.get(f.name).edge ? "bottom" : nearestEdge(f);
-}
 
 // A spot on the board away from the MaWiLos already there, clear of the
 // title.
@@ -269,9 +323,10 @@ function freeSpot(name) {
   return bestSpot(Math.random, figureBox(name, 1), others);
 }
 
-// Tapping a MaWiLo gives it a small wiggle and opens its card.
-function tapMawilo(f) {
-  if (!reducedMotion) playMove(f, "wiggle");
+// Tapping a MaWiLo makes it do its signature move, and then its card
+// opens.
+async function tapMawilo(f) {
+  await playSignature(f);
   openCard(f.name);
 }
 
@@ -345,33 +400,22 @@ async function invite(name) {
   const f = figures.get(name);
   if (f?.state === "resident" || f?.state === "leaving") return;
   const spot = centreSpot(name);
-  if (!byFile.get(name).edge) makeRoom(name, spot);
+  makeRoom(name, spot);
 
   offstage = offstage.filter((n) => n !== name);
-  const m = byFile.get(name);
   const g = makeFigure(name, { x: 0.5, y: 2, r: rand(-6, 6), z: ++topZ, size: 1 }, "resident");
-  g.grabbed = true;
   await g.img.decode().catch(() => {});
-  const { w, h } = extent(g);
-  if (m.edge) {
-    const x = m.edge === "left" ? 0.12 : 0.86;
-    g.x = x;
-    g.y = 1 + h / 2;
-    place(g);
-    void g.el.offsetWidth;
-    await moveTo(g, x, 1 - h * 0.2, "pop");
-  } else {
-    const fromLeft = spot.x < 0.5;
-    g.x = fromLeft ? -w / 2 : 1 + w / 2;
-    g.y = spot.y;
-    place(g);
-    void g.el.offsetWidth;
-    const px = Math.abs(spot.x - g.x) * innerWidth;
-    await moveTo(g, spot.x, spot.y, "walk", clamp((px / 160) * 1000, 1400, 3200));
-  }
-  // Once it has arrived, show its card, unless someone has already picked
-  // it up or sent it away.
-  await wait(250);
+  const { w } = extent(g);
+  g.x = spot.x < 0.5 ? -w / 2 : 1 + w / 2;
+  g.y = spot.y;
+  place(g);
+  void g.el.offsetWidth;
+  const px = Math.abs(spot.x - g.x) * innerWidth;
+  await moveTo(g, spot.x, spot.y, "walk", clamp((px / 160) * 1000, 1400, 3200));
+  // Once it has arrived, it does its signature move and its card opens,
+  // unless someone has already picked it up or sent it away.
+  if (g.state !== "resident" || g.dragging || figures.get(name) !== g) return;
+  await playSignature(g);
   if (g.state === "resident" && !g.dragging && figures.get(name) === g) openCard(name);
 }
 
@@ -408,9 +452,8 @@ function extent(f) {
   return { w: f.el.offsetWidth / innerWidth, h: f.el.offsetHeight / innerHeight };
 }
 
-// Move a figure with a waddle (sideways), a pop (up) or a sink (down), and
-// resolve when it gets there. A waddle takes `ms` when given, and otherwise
-// goes at walking pace.
+// Move a figure with a waddle or a march, and resolve when it gets there.
+// It takes `ms` when given, and otherwise goes at walking pace.
 async function moveTo(f, x, y, how, ms) {
   if (reducedMotion) {
     f.x = x;
@@ -418,30 +461,19 @@ async function moveTo(f, x, y, how, ms) {
     place(f);
     return;
   }
-  if (ms) {
-    // Use the given duration.
-  } else if (how === "walk") {
-    ms = Math.max(900, (Math.abs(x - f.x) * innerWidth * 1000) / WALK_SPEED);
-  } else {
-    ms = how === "pop" ? 900 : 600;
-  }
+  ms ||= Math.max(900, (Math.abs(x - f.x) * innerWidth * 1000) / WALK_SPEED);
   f.el.style.setProperty("--dur", `${ms}ms`);
-  const cls = { walk: "walking", march: "marching", pop: "popping", sink: "sinking" }[how];
+  const cls = how === "march" ? "marching" : "walking";
   f.el.classList.add(cls);
   void f.el.offsetWidth;
   f.x = x;
   f.y = y;
   place(f);
-  if (how === "walk" || how === "march") {
-    // Let the rocking die away over the last part of the walk, then stop.
-    await wait(Math.max(0, ms - 700));
-    f.el.classList.add("slowing");
-    await wait(700);
-    f.el.classList.remove("slowing");
-  } else {
-    await wait(ms);
-  }
-  f.el.classList.remove(cls);
+  // Let the rocking die away over the last part of the walk, then stop.
+  await wait(Math.max(0, ms - 700));
+  f.el.classList.add("slowing");
+  await wait(700);
+  f.el.classList.remove("slowing", cls);
 }
 
 function nearestEdge(f) {
@@ -449,32 +481,17 @@ function nearestEdge(f) {
   return Object.entries(d).sort((a, b) => a[1] - b[1])[0][0];
 }
 
-async function sendOff(f, edge) {
+// A MaWiLo leaves quietly: it walks off the nearer side of the screen.
+async function sendOff(f) {
   f.state = "leaving";
-  if (waiting === f) waiting = null;
-  clearTimeout(f.leaveTimer);
   syncBox();
-  const { w, h } = extent(f);
-  if (edge === "left") await moveTo(f, -w, f.y, "walk");
-  else if (edge === "right") await moveTo(f, 1 + w, f.y, "walk");
-  else await moveTo(f, f.x, 1 + h, "sink");
+  const { w } = extent(f);
+  const x = f.x < 0.5 ? -w : 1 + w;
+  await moveTo(f, x, f.y, "walk", clamp(Math.abs(x - f.x) * innerWidth * 4, 1200, 2400));
   f.el.remove();
   figures.delete(f.name);
   offstage.push(f.name);
   syncBox();
-}
-
-function smallWiggle(img) {
-  img.animate(
-    [
-      { transform: "rotate(0deg)" },
-      { transform: "rotate(-2deg)" },
-      { transform: "rotate(1.5deg)" },
-      { transform: "rotate(-1deg)" },
-      { transform: "rotate(0deg)" },
-    ],
-    { duration: 1200, easing: "ease-in-out" },
-  );
 }
 
 // Where a pointer is on a figure, as a fraction of its half-width and
@@ -573,16 +590,6 @@ function enableDrag(f) {
     f.el.classList.remove("edge-zone");
   });
 
-  // Greet a mouse that comes over, at most once every 1.5 seconds.
-  let lastGreeting = 0;
-  f.el.addEventListener("pointerenter", (event) => {
-    if (reducedMotion || event.pointerType !== "mouse" || f.dragging) return;
-    if (f.state !== "resident" && f.state !== "waiting") return;
-    if (performance.now() - lastGreeting < 1500) return;
-    lastGreeting = performance.now();
-    playMove(f, pick(["wiggle", "hop"]));
-  });
-
   // Scroll the wheel or pinch the trackpad over a MaWiLo to resize it.
   f.el.addEventListener(
     "wheel",
@@ -606,9 +613,8 @@ function enableDrag(f) {
     f.touchId = event.pointerType === "touch" ? event.pointerId : undefined;
     f.el.setPointerCapture(event.pointerId);
     f.dragging = true;
-    f.grabbed = true;
-    // Stop any walk or pop in progress so the figure follows the pointer.
-    f.el.classList.remove("walking", "popping", "sinking", "slowing");
+    // Stop any walk in progress so the figure follows the pointer.
+    f.el.classList.remove("walking", "marching", "slowing");
     moved = 0;
     f.z = ++topZ;
     f.el.style.zIndex = f.z;
@@ -671,92 +677,65 @@ function enableDrag(f) {
       return;
     }
     if (mode === "drag" && (f.x < 0.035 || f.x > 0.965 || f.y > 0.95)) {
-      sendOff(f, exitEdge(f));
+      sendOff(f);
       return;
     }
-    if (f.state === "waiting") {
-      if (mode === "turn") return;
-      clearTimeout(f.leaveTimer);
-      waiting = null;
-    }
-    f.state = "resident";
     syncBox();
   };
   f.el.addEventListener("pointerup", drop);
   f.el.addEventListener("pointercancel", drop);
 }
 
-// Small moves that invite someone to play. Each one runs on the image, so
-// it does not disturb the figure's place on the board.
-const IDLE_MOVES = {
-  wiggle: [
-    [
-      { transform: "rotate(0deg)" },
-      { transform: "rotate(-1deg)" },
-      { transform: "rotate(0.8deg)" },
-      { transform: "rotate(-0.5deg)" },
-      { transform: "rotate(0deg)" },
-    ],
-    { duration: 2600, easing: "ease-in-out" },
+// Signature moves. Each MaWiLo has one, named by `move` in data.js, and
+// makes it when it arrives and when it is tapped. Each move runs on the
+// image, so it does not disturb the figure's place on the board.
+const SIGNATURE_MOVES = {
+  bounce: [
+    ["translateY(0) scale(1, 1)", "translateY(0) scale(1.08, 0.9)", "translateY(-16%) scale(0.95, 1.06)", "translateY(0) scale(1.05, 0.94)", "translateY(-7%) scale(0.98, 1.02)", "translateY(0) scale(1, 1)"],
+    900,
   ],
-  breathe: [
-    [
-      { transform: "scale(1, 1)" },
-      { transform: "scale(1.01, 1.02)" },
-      { transform: "scale(1, 1)" },
-    ],
-    { duration: 3400, easing: "ease-in-out" },
+  hop: [["translateY(0)", "translateY(-12%)", "translateY(0)", "translateY(-5%)", "translateY(0)"], 700],
+  jump: [
+    ["translateY(0) scale(1, 1)", "translateY(4%) scale(1.06, 0.9)", "translateY(-26%) scale(0.96, 1.06)", "translateY(0) scale(1.06, 0.92)", "translateY(0) scale(1, 1)"],
+    800,
   ],
-  hop: [
-    [
-      { transform: "translateY(0) scale(1, 1)" },
-      { transform: "translateY(0) scale(1.015, 0.98)", offset: 0.2 },
-      { transform: "translateY(-3%) scale(0.99, 1.015)", offset: 0.5 },
-      { transform: "translateY(0) scale(1.01, 0.99)", offset: 0.8 },
-      { transform: "translateY(0) scale(1, 1)" },
-    ],
-    { duration: 1300, easing: "ease-in-out" },
-  ],
-  lean: [
-    [
-      { transform: "rotate(0deg)" },
-      { transform: "rotate(var(--lean))", offset: 0.3 },
-      { transform: "rotate(var(--lean))", offset: 0.7 },
-      { transform: "rotate(0deg)" },
-    ],
-    { duration: 3800, easing: "ease-in-out" },
-  ],
-  shiver: [
-    [
-      { transform: "translateX(0)" },
-      { transform: "translateX(-0.4%)" },
-      { transform: "translateX(0.4%)" },
-      { transform: "translateX(-0.3%)" },
-      { transform: "translateX(0.3%)" },
-      { transform: "translateX(-0.15%)" },
-      { transform: "translateX(0)" },
-    ],
-    { duration: 1100, easing: "ease-in-out" },
-  ],
+  spin: [["rotate(0deg)", "rotate(360deg)"], 800],
+  twirl: [["rotate(0deg) scaleX(1)", "rotate(0deg) scaleX(-1)", "rotate(0deg) scaleX(1)"], 700],
+  flip: [["scaleX(1)", "scaleX(-1)", "scaleX(-1)", "scaleX(1)"], 1100],
+  roll: [["translateX(0) rotate(0deg)", "translateX(12%) rotate(80deg)", "translateX(-6%) rotate(-30deg)", "translateX(0) rotate(0deg)"], 1000],
+  wiggle: [["rotate(0deg)", "rotate(-8deg)", "rotate(7deg)", "rotate(-5deg)", "rotate(3deg)", "rotate(0deg)"], 800],
+  wobble: [["skewX(0deg)", "skewX(-9deg)", "skewX(8deg)", "skewX(-5deg)", "skewX(3deg)", "skewX(0deg)"], 900],
+  shimmy: [["translateX(0)", "translateX(-5%)", "translateX(5%)", "translateX(-5%)", "translateX(5%)", "translateX(0)"], 700],
+  shiver: [["translateX(0)", "translateX(-2%)", "translateX(2%)", "translateX(-2%)", "translateX(2%)", "translateX(-1%)", "translateX(1%)", "translateX(0)"], 600],
+  sway: [["rotate(0deg)", "rotate(-10deg)", "rotate(10deg)", "rotate(0deg)"], 1400],
+  wave: [["rotate(0deg)", "rotate(12deg)", "rotate(-4deg)", "rotate(12deg)", "rotate(0deg)"], 1000],
+  nod: [["rotate(0deg) translateY(0)", "rotate(6deg) translateY(3%)", "rotate(0deg) translateY(0)", "rotate(6deg) translateY(3%)", "rotate(0deg) translateY(0)"], 900],
+  bow: [["rotate(0deg) scaleY(1)", "rotate(14deg) scaleY(0.94)", "rotate(14deg) scaleY(0.94)", "rotate(0deg) scaleY(1)"], 1100],
+  tip: [["rotate(0deg)", "rotate(-12deg)", "rotate(-12deg)", "rotate(0deg)"], 900],
+  stretch: [["scale(1, 1)", "scale(0.92, 1.14)", "scale(0.92, 1.14)", "scale(1.04, 0.96)", "scale(1, 1)"], 1000],
+  stomp: [["translateY(0) rotate(0deg)", "translateY(-6%) rotate(-5deg)", "translateY(0) rotate(0deg)", "translateY(-6%) rotate(5deg)", "translateY(0) rotate(0deg)"], 800],
+  headbang: [["rotate(0deg)", "rotate(10deg)", "rotate(-4deg)", "rotate(10deg)", "rotate(-4deg)", "rotate(0deg)"], 800],
+  flutter: [["scaleX(1)", "scaleX(0.9)", "scaleX(1.06)", "scaleX(0.9)", "scaleX(1.06)", "scaleX(1)"], 700],
 };
 
 // Play a MaWiLo's stop-motion trick by swapping its image through the
 // frames in img/frames/, then back to the first one.
 function playTrick(f) {
   const count = byFile.get(f.name).frames;
-  f.moving = true;
-  let i = 1;
-  const step = () => {
-    i += 1;
-    if (i > count || f.state !== "resident") {
-      f.img.src = `img/${f.name}.png`;
-      f.moving = false;
-      return;
-    }
-    f.img.src = `img/frames/${f.name}-${i}.png`;
-    setTimeout(step, 550);
-  };
-  setTimeout(step, 150);
+  return new Promise((resolve) => {
+    let i = 1;
+    const step = () => {
+      i += 1;
+      if (i > count || f.state !== "resident") {
+        f.img.src = `img/${f.name}.png`;
+        resolve();
+        return;
+      }
+      f.img.src = `img/frames/${f.name}-${i}.png`;
+      setTimeout(step, 450);
+    };
+    setTimeout(step, 100);
+  });
 }
 
 // Load the trick frames early so they swap in without a flicker.
@@ -764,33 +743,39 @@ for (const m of MAWILO_DATA) {
   for (let i = 1; i <= (m.frames || 0); i++) new Image().src = `img/frames/${m.file}-${i}.png`;
 }
 
-function playMove(f, name) {
-  if (f.dragging || f.moving) return;
-  // A MaWiLo with a trick does its trick instead of a small move.
-  if (byFile.get(f.name).frames) {
-    playTrick(f);
-    return;
-  }
-  const [frames, options] = IDLE_MOVES[name];
-  if (name === "lean") f.img.style.setProperty("--lean", `${pick([-2.5, 2.5])}deg`);
+// Play a MaWiLo's signature move, and resolve when it is done.
+async function playSignature(f) {
+  if (reducedMotion || f.dragging || f.moving) return;
+  const m = byFile.get(f.name);
   f.moving = true;
-  const animation = f.img.animate(frames, options);
-  animation.onfinish = animation.oncancel = () => {
-    f.moving = false;
-  };
+  if (m.move === "trick") {
+    await playTrick(f);
+  } else {
+    const [frames, duration] = SIGNATURE_MOVES[m.move] || SIGNATURE_MOVES.wiggle;
+    await f.img
+      .animate(frames.map((transform) => ({ transform })), { duration, easing: "ease-in-out" })
+      .finished.catch(() => {});
+  }
+  f.moving = false;
 }
 
-// Now and then, one MaWiLo on the board does a small move. The same one
-// never moves twice in a row.
+// Now and then, one MaWiLo on the board breathes or wiggles a little, to
+// invite play. The same one never moves twice in a row.
+const IDLE_MOVES = [
+  [["rotate(0deg)", "rotate(-1deg)", "rotate(0.8deg)", "rotate(-0.5deg)", "rotate(0deg)"], 2600],
+  [["scale(1, 1)", "scale(1.01, 1.02)", "scale(1, 1)"], 3400],
+];
+
 function startIdleMoves() {
   let last = null;
   const tick = () => {
     const resting = [...figures.values()].filter(
-      (f) => f.state === "resident" && !f.dragging && f !== last,
+      (f) => f.state === "resident" && !f.dragging && !f.moving && f !== last,
     );
     const f = pick(resting);
     if (f) {
-      playMove(f, pick(Object.keys(IDLE_MOVES)));
+      const [frames, duration] = pick(IDLE_MOVES);
+      f.img.animate(frames.map((transform) => ({ transform })), { duration, easing: "ease-in-out" });
       last = f;
     }
     setTimeout(tick, rand(4000, 8000));
@@ -879,15 +864,15 @@ function fillCard(file) {
   loopCardTrick(m);
 }
 
-// The card button invites an offstage MaWiLo in or sends one on the board
-// home.
+// The card button brings an offstage MaWiLo in, or says bye to one on the
+// board.
 const cardAction = document.getElementById("card-action");
 
 function syncCardAction() {
   if (!cardFile) return;
   const f = figures.get(cardFile);
   const onBoard = f && f.state !== "leaving";
-  cardAction.textContent = onBoard ? "send home" : "invite in";
+  cardAction.textContent = onBoard ? "bye" : "come in";
   cardAction.classList.toggle("home", Boolean(onBoard));
 }
 
@@ -895,17 +880,39 @@ cardAction.addEventListener("click", async () => {
   const name = cardFile;
   const f = figures.get(name);
   if (f && f.state !== "leaving") {
-    sendOff(f, exitEdge(f));
+    sendOff(f);
     syncCardAction();
     return;
   }
   // Step out of the way while the MaWiLo walks in, then come back.
-  await closeCard();
+  await Promise.all([closeCard(), closeAlbum()]);
   await invite(name);
 });
 
+// The first time a card opens on a touch screen, its contents slide a
+// little to the left and back, to show that the cards can be flicked.
+let nudged = false;
+
+function nudgeCard() {
+  if (nudged || reducedMotion || !matchMedia("(hover: none)").matches) return;
+  nudged = true;
+  const parts = [card.querySelector(".card-picture"), card.querySelector(".card-text")];
+  for (const el of parts) {
+    el.animate(
+      [
+        { transform: "translateX(0)" },
+        { transform: "translateX(-34px)", offset: 0.4 },
+        { transform: "translateX(6px)", offset: 0.75 },
+        { transform: "translateX(0)" },
+      ],
+      { duration: 900, delay: 750, easing: "ease-in-out" },
+    );
+  }
+}
+
 function openCard(file) {
   fillCard(file);
+  nudgeCard();
   returnFocus = document.activeElement;
   card.hidden = false;
   void card.offsetWidth;
@@ -992,7 +999,10 @@ document.getElementById("card-flip").addEventListener("click", () => {
 });
 document.getElementById("card-close").addEventListener("click", closeCard);
 addEventListener("keydown", (event) => {
-  if (event.key === "Escape") closeCard();
+  if (event.key === "Escape") {
+    if (card.classList.contains("open")) closeCard();
+    else closeAlbum();
+  }
   if (event.key === "ArrowLeft") stepCard(-1);
   if (event.key === "ArrowRight") stepCard(1);
 });
@@ -1143,8 +1153,8 @@ async function intro(onStage, layout) {
   // Shrink and tilt to their places on the board while they walk there, so
   // they do not snap to them at the end.
   const carriersDone = carriers.map(({ f, target }, i) => {
-    if (!target) return sendOff(f, i === 0 ? "left" : "right");
-    const done = moveTo(f, target.x, target.y, "walk", 2000);
+    if (!target) return sendOff(f);
+    const done = moveTo(f, target.x, target.y, "walk", 2000).then(() => playSignature(f));
     f.r = target.r;
     setSize(f, target.size || 1);
     place(f);
@@ -1163,13 +1173,15 @@ async function intro(onStage, layout) {
       place(f);
       void f.el.offsetWidth;
       await moveTo(f, target.x, target.y, "walk", rand(1700, 2300));
+      await playSignature(f);
     }),
   ]);
 }
 
 async function start() {
+  buildAlbum();
   await Promise.all([loadAspects(), document.fonts.ready]);
-  const walkers = MAWILO_DATA.filter((m) => !m.edge).map((m) => m.file);
+  const walkers = MAWILO_DATA.map((m) => m.file);
   const others = shuffle(walkers.filter((n) => !SIGN_CARRIERS.includes(n)));
   const wanted = [...SIGN_CARRIERS, ...others.slice(0, capacity() - SIGN_CARRIERS.length)];
   const layout = scatterLayout(wanted);
