@@ -101,8 +101,8 @@ function titleRect() {
 
 // The size of a figure on screen, in pixels, including the extra room it
 // takes up when tilted by `r` degrees.
-function figureBox(name, size, r = 8) {
-  const h = figureSize() * (SCALE[name] || 1) * size;
+function figureBox(name, size, r = 8, y = 0.75) {
+  const h = figureSize() * (SCALE[name] || 1) * size * depthAt(y);
   const w = h * (ASPECT[name] || 1);
   const a = (Math.abs(r) * Math.PI) / 180;
   return { w: w * Math.cos(a) + h * Math.sin(a), h: w * Math.sin(a) + h * Math.cos(a) };
@@ -244,21 +244,14 @@ const box = document.getElementById("box");
 const boxPile = document.getElementById("box-pile");
 const boxCount = document.getElementById("box-count");
 
-const quick = document.getElementById("quick");
 const quickIn = document.getElementById("quick-in");
 const quickBye = document.getElementById("quick-bye");
 
-// Where the photo box and the buttons above it sit, in pixels. MaWiLos do
-// not start there.
+// Where the footer with the tickets and the photo stack sits, in pixels.
+// MaWiLos do not start there and are not pushed onto it.
 function boxRect() {
-  const r = box.getBoundingClientRect();
-  const q = quick.getBoundingClientRect();
-  return {
-    left: Math.min(r.left, q.left) - 8,
-    top: Math.min(r.top, q.top) - 8,
-    right: Math.max(r.right, q.right) + 8,
-    bottom: Math.max(r.bottom, q.bottom) + 8,
-  };
+  const r = document.querySelector(".footer").getBoundingClientRect();
+  return { left: r.left - 8, top: r.top - 8, right: r.right + 8, bottom: r.bottom + 8 };
 }
 
 // MaWiLos that "bye" can pick. Bobble and Ziggy stay on the board.
@@ -399,7 +392,8 @@ async function invite(name) {
   await g.img.decode().catch(() => {});
   const { w } = extent(g);
   g.x = spot.x < 0.5 ? -w / 2 : 1 + w / 2;
-  g.y = spot.y;
+  // Come in on a slight diagonal, from a little above or below.
+  g.y = clamp(spot.y + rand(-0.14, 0.14), 0.2, 0.92);
   place(g);
   void g.el.offsetWidth;
   const px = Math.abs(spot.x - g.x) * innerWidth;
@@ -409,11 +403,24 @@ async function invite(name) {
   if (g.state === "resident" && !g.dragging && figures.get(name) === g) await playSignature(g);
 }
 
+// Perspective: a MaWiLo higher up the screen is further away, so it is
+// drawn smaller and behind the ones lower down. One being dragged is always
+// in front.
+const NEAR = 1.12;
+const FAR = 0.8;
+
+function depthAt(y) {
+  const top = (titleRect().bottom || 0) / innerHeight;
+  const t = clamp((y - top) / Math.max(0.1, 1 - top), 0, 1);
+  return FAR + (NEAR - FAR) * t;
+}
+
 function place(f) {
   f.el.style.setProperty("--x", f.x);
   f.el.style.setProperty("--y", f.y);
   f.el.style.setProperty("--r", `${f.r}deg`);
-  f.el.style.zIndex = f.z;
+  f.el.style.setProperty("--depth", depthAt(f.y).toFixed(3));
+  f.el.style.zIndex = f.dragging ? 5000 : Math.round(clamp(f.y, -1, 2) * 1000) + 1000;
 }
 
 function makeFigure(name, pos, state) {
@@ -607,7 +614,7 @@ function enableDrag(f) {
     f.el.classList.remove("walking", "marching", "slowing");
     moved = 0;
     f.z = ++topZ;
-    f.el.style.zIndex = f.z;
+    f.el.style.zIndex = 5000;
     startX = lastX = event.clientX;
     startY = event.clientY;
     originX = f.x;
@@ -1271,7 +1278,7 @@ async function intro(onStage, layout) {
       const { w, h } = extent(f);
       const edge = nearestEdge(target);
       f.x = edge === "left" ? -w / 2 : edge === "right" ? 1 + w / 2 : target.x;
-      f.y = edge === "bottom" ? 1 + h / 2 : target.y;
+      f.y = edge === "bottom" ? 1 + h / 2 : clamp(target.y + rand(-0.14, 0.14), 0.2, 0.92);
       place(f);
       void f.el.offsetWidth;
       await moveTo(f, target.x, target.y, "walk", rand(1700, 2300));
