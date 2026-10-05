@@ -411,7 +411,7 @@ body {
   inset: 0;
   z-index: 1500;
   overflow-y: auto;
-  padding: 0 16px 32px;
+  padding: 64px 16px 32px;
   background: rgb(247 241 232 / 0.97);
   opacity: 0;
   transition: opacity 300ms ease;
@@ -468,26 +468,23 @@ body {
   text-overflow: ellipsis;
 }
 
-/* A slim header row stays at the top while the grid scrolls under it, so
-   the close button never sits over a photo. */
-.album-header {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  display: flex;
-  justify-content: flex-end;
-  margin: 0 -16px 14px;
-  padding: 6px 10px;
-  background: var(--bg);
-  box-shadow: 0 6px 10px -8px rgb(59 36 22 / 0.25);
-}
-
+/* The close button floats over the grid as a round button, so it stands
+   out from the photos while they scroll under it. */
 .album-close {
-  width: 40px;
-  height: 40px;
-  border: 0;
-  background: none;
-  color: var(--muted);
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  padding: 0 0 3px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: 0 3px 10px rgb(59 36 22 / 0.25);
+  color: var(--ink);
   font-size: 30px;
   line-height: 1;
   cursor: pointer;
