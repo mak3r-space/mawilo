@@ -190,10 +190,22 @@ function scatterLayout(names) {
   const centre = { x: 0.5, y: (titleRect().bottom / innerHeight + 1) / 2 };
   const placed = [];
   const layout = {};
-  names.forEach((name, i) => {
-    const size = 0.82 + rand() * 0.4;
-    const r = (rand() - 0.5) * 16;
-    const box = figureBox(name, size, r);
+  // Bobble and Ziggy are placed as one pair, side by side, with Ziggy
+  // leaning towards Bobble. The others are placed one by one.
+  const units = names.filter((n) => !SIGN_CARRIERS.includes(n)).map((n) => [n]);
+  if (SIGN_CARRIERS.every((n) => names.includes(n))) units.unshift(SIGN_CARRIERS);
+  units.forEach((unit, i) => {
+    const pair = unit.length === 2;
+    const size = pair ? 1 : 0.82 + rand() * 0.4;
+    const r = pair ? 0 : (rand() - 0.5) * 16;
+    const parts = pair
+      ? [figureBox(unit[0], 1, 0), figureBox(unit[1], 1, PAIR_LEAN)]
+      : [figureBox(unit[0], size, r)];
+    const overlap = pair ? Math.min(parts[0].w, parts[1].w) * 0.12 : 0;
+    const box = {
+      w: parts.reduce((sum, b) => sum + b.w, 0) - overlap,
+      h: Math.max(...parts.map((b) => b.h)),
+    };
     let best = null;
     let bestScore = -Infinity;
     for (let k = 0; k < 400; k++) {
@@ -211,7 +223,13 @@ function scatterLayout(names) {
     }
     if (!best) return;
     placed.push({ ...best, box });
-    layout[name] = { ...best, r, z: i + 1, size };
+    if (!pair) {
+      layout[unit[0]] = { ...best, r, z: i + 1, size };
+      return;
+    }
+    const cx = best.x * innerWidth;
+    layout[unit[0]] = { x: (cx - box.w / 2 + parts[0].w / 2) / innerWidth, y: best.y, r: 0, z: i + 1, size };
+    layout[unit[1]] = { x: (cx + box.w / 2 - parts[1].w / 2) / innerWidth, y: best.y, r: PAIR_LEAN, z: i + 2, size };
   });
   return layout;
 }
@@ -1011,6 +1029,8 @@ board.addEventListener("pointerdown", (event) => {
 });
 
 const SIGN_CARRIERS = ["blue-tassels-striped-body", "blue-striped-dress"];
+// Ziggy, on the right, leans this far towards Bobble.
+const PAIR_LEAN = -40;
 
 function titleRestingPlace(title) {
   return { x: (innerWidth - title.offsetWidth) / 2, y: TOP_GAP };
@@ -1040,7 +1060,7 @@ async function intro(onStage, layout) {
     const target = layout[name];
     const f = makeFigure(name, { ...(target || { r: 0, z: ++topZ }), y: 2 }, target ? "resident" : "leaving");
     // The right carrier leans left so the two face each other.
-    f.r = i === 1 ? -40 : 0;
+    f.r = i === 1 ? PAIR_LEAN : 0;
     // Carry the sign a little bigger than normal.
     setSize(f, 1.15);
     return { f, target };
@@ -1154,7 +1174,7 @@ async function intro(onStage, layout) {
   // they do not snap to them at the end.
   const carriersDone = carriers.map(({ f, target }, i) => {
     if (!target) return sendOff(f);
-    const done = moveTo(f, target.x, target.y, "walk", 2000).then(() => playSignature(f));
+    const done = moveTo(f, target.x, target.y, "walk", 2000);
     f.r = target.r;
     setSize(f, target.size || 1);
     place(f);
@@ -1173,9 +1193,15 @@ async function intro(onStage, layout) {
       place(f);
       void f.el.offsetWidth;
       await moveTo(f, target.x, target.y, "walk", rand(1700, 2300));
-      await playSignature(f);
     }),
   ]);
+
+  // Once everyone is in, three of them do their moves, one after another.
+  const performers = shuffle(entering.map(({ f }) => f)).slice(0, 3);
+  for (const f of performers) {
+    await wait(350);
+    await playSignature(f);
+  }
 }
 
 async function start() {
