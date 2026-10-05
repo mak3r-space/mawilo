@@ -1026,10 +1026,11 @@ async function intro(onStage, layout) {
   offstage = offstage.filter((n) => !SIGN_CARRIERS.includes(n));
   // Each carrier goes to its place on the board afterwards, or offstage if
   // it has no place.
-  const carriers = SIGN_CARRIERS.map((name) => {
+  const carriers = SIGN_CARRIERS.map((name, i) => {
     const target = layout[name];
     const f = makeFigure(name, { ...(target || { r: 0, z: ++topZ }), y: 2 }, target ? "resident" : "leaving");
-    f.r = 0;
+    // The right carrier leans left so the two face each other.
+    f.r = i === 1 ? -40 : 0;
     // Carry the sign a little bigger than normal.
     setSize(f, 1.15);
     return { f, target };
