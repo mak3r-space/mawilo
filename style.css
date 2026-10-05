@@ -97,7 +97,7 @@ body {
 .quick {
   /* A dark offset shadow, like ink on the printed title. It sits on the
      row, because the notched tickets would cut it off. */
-  filter: drop-shadow(2.5px 2.5px 0 var(--ink));
+  filter: drop-shadow(2px 2px 0 var(--ink));
   display: flex;
   align-items: center;
   gap: 8px;
@@ -134,28 +134,18 @@ body {
   border-left: 1.5px dashed rgb(255 255 255 / 0.7);
 }
 
-/* "come in" is the main ticket: bigger, watermelon, with white letters
-   that carry an ink offset like the title. */
+/* "come in" is the main ticket and a little bigger. */
 .quick-in {
   background: var(--watermelon);
-  font-size: 22px;
-  padding: 14px 24px 14px 32px;
-  text-shadow: 2px 2px 0 var(--ink);
+  font-size: 20px;
+  padding: 13px 22px 13px 30px;
   transform: rotate(-4deg);
 }
 
-/* "bye" is the quieter ticket: smaller and paper coloured, with the title's
-   own colours, dark letters with a turquoise offset. */
 .quick-bye {
-  background: var(--card);
-  color: var(--ink);
+  background: var(--turquoise);
   font-size: 16px;
-  text-shadow: 1.5px 1.5px 0 var(--turquoise);
   transform: rotate(3deg);
-}
-
-.quick-bye::before {
-  border-left-color: var(--line);
 }
 
 .quick-in:hover {
