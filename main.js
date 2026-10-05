@@ -1,6 +1,6 @@
-// MaWiLos on the board stay where they are put. The rest wait offstage
-// until they are invited in from the footer or a card. Pushing a MaWiLo to
-// the edge of the screen sends it offstage again.
+// MaWiLos on the board stay where they are put. The rest wait in the photo
+// stack until the "come in" ticket brings them in. Pushing a MaWiLo to the
+// edge of the screen, or the "bye" ticket, sends one back.
 
 const SCALE = {
   "red-grey-striped-knit": 1.1,
@@ -108,8 +108,8 @@ function titleRect() {
 
 // The size of a figure on screen, in pixels, including the extra room it
 // takes up when tilted by `r` degrees.
-function figureBox(name, size, r = 8, y = 0.75) {
-  const h = figureSize() * (SCALE[name] || 1) * size * depthAt(y);
+function figureBox(name, size, r = 8) {
+  const h = figureSize() * (SCALE[name] || 1) * size * depthAt(0.75);
   const w = h * (ASPECT[name] || 1);
   const a = (Math.abs(r) * Math.PI) / 180;
   return { w: w * Math.cos(a) + h * Math.sin(a), h: w * Math.sin(a) + h * Math.cos(a) };
@@ -141,7 +141,7 @@ function validSpot(p, box) {
     return false;
   }
   if (overlapsTitle(p, box)) return false;
-  const b = boxRect();
+  const b = footerRect();
   return !(left < b.right && right > b.left && top < b.bottom && bottom > b.top);
 }
 
@@ -186,10 +186,10 @@ function fitsAmong(p, box, placed) {
   );
 }
 
-// Scatter MaWiLos loosely over the board, the same way on every load, with
-// slightly varied sizes. None of them overlaps the title or another one.
-// A MaWiLo that does not fit stays offstage, so on small screens fewer
-// start on the board.
+// Scatter MaWiLos loosely over the board, with slightly varied sizes. The
+// spots are the same on every load. None of them overlaps the title or
+// another one. A MaWiLo that does not fit stays offstage, so on small
+// screens fewer start on the board.
 function scatterLayout(names) {
   const rand = seededRandom(7);
   const aspect = innerWidth / innerHeight;
@@ -201,7 +201,7 @@ function scatterLayout(names) {
   // leaning towards Bobble. The others are placed one by one.
   const units = names.filter((n) => !SIGN_CARRIERS.includes(n)).map((n) => [n]);
   if (SIGN_CARRIERS.every((n) => names.includes(n))) units.unshift(SIGN_CARRIERS);
-  units.forEach((unit, i) => {
+  units.forEach((unit) => {
     const pair = unit.length === 2;
     // The MaWiLos with stop-motion tricks start a little bigger, more so on
     // phones, so their tricks are easy to see.
@@ -263,16 +263,16 @@ addEventListener("resize", fitFooter);
 // more, so the title clears the notch and the status bar.
 const TOP_GAP = matchMedia("(max-width: 640px)").matches ? 40 : 14;
 
-const box = document.getElementById("box");
-const boxPile = document.getElementById("box-pile");
-const boxCount = document.getElementById("box-count");
+const stack = document.getElementById("stack");
+const stackPile = document.getElementById("stack-pile");
+const ticketNumber = document.getElementById("ticket-number");
 
-const quickIn = document.getElementById("quick-in");
-const quickBye = document.getElementById("quick-bye");
+const ticketIn = document.getElementById("ticket-in");
+const ticketBye = document.getElementById("ticket-bye");
 
 // Where the footer with the tickets and the photo stack sits, in pixels.
 // MaWiLos do not start there and are not pushed onto it.
-function boxRect() {
+function footerRect() {
   const r = footer.getBoundingClientRect();
   return { left: r.left - 8, top: r.top - 8, right: r.right + 8, bottom: r.bottom + 8 };
 }
@@ -289,15 +289,19 @@ function byeChoices() {
   );
 }
 
-// The buttons above the box bring in a surprise MaWiLo, or say bye to one.
-quickIn.addEventListener("click", () => {
+// The tickets bring in the MaWiLo on top of the stack, or say bye to a
+// surprise one.
+ticketIn.addEventListener("click", () => {
   if (!document.body.classList.contains("footer-in")) return;
-  // The ticket brings in the MaWiLo on top of the photo stack.
-  const name = offstage.find((n) => !figures.has(n));
-  if (name) invite(name);
+  // The ticket brings in the MaWiLo on top of the photo stack. If that one
+  // is still walking off after a "bye", it turns round once it is gone.
+  const name = offstage[0];
+  const leaving = figures.get(name);
+  if (leaving?.state === "leaving") leaving.gone.then(() => invite(name));
+  else if (name) invite(name);
 });
 
-quickBye.addEventListener("click", () => {
+ticketBye.addEventListener("click", () => {
   if (!document.body.classList.contains("footer-in")) return;
   const f = pick(byeChoices());
   if (f) sendOff(f);
@@ -309,7 +313,7 @@ quickBye.addEventListener("click", () => {
 let pileTop;
 
 function shufflePile(showPile) {
-  const top = boxPile.lastElementChild;
+  const top = stackPile.lastElementChild;
   top.getAnimations().forEach((a) => a.finish());
   top.animate(
     [
@@ -323,7 +327,7 @@ function shufflePile(showPile) {
 }
 
 // Show the top three offstage MaWiLos on the pile and how many wait in all.
-function syncBox() {
+function syncStack() {
   // Count a MaWiLo as gone the moment it is told to leave, so the count
   // keeps up with quick taps instead of waiting for the walk off.
   const waiting = MAWILO_DATA.map((m) => m.file).filter((n) => figures.get(n)?.state !== "resident");
@@ -331,7 +335,7 @@ function syncBox() {
   waiting.sort((a, b) => order(a) - order(b));
   // The photo on top of the pile, the last one, is the next to come in.
   const shown = waiting.slice(0, 3).reverse();
-  const photos = [...boxPile.querySelectorAll(".pile-photo")];
+  const photos = [...stackPile.querySelectorAll(".pile-photo")];
   const showPile = () =>
     photos.forEach((el, i) => {
       const name = shown[i - (photos.length - shown.length)];
@@ -345,20 +349,19 @@ function syncBox() {
     showPile();
   }
   pileTop = nextTop;
-  boxCount.textContent = String(waiting.length);
-  boxCount.hidden = waiting.length === 0;
+  ticketNumber.textContent = String(waiting.length);
+  ticketNumber.hidden = waiting.length === 0;
   // The tear line sits just right of the number.
-  quickIn.style.setProperty("--stub", `${boxCount.offsetWidth}px`);
+  ticketIn.style.setProperty("--stub", `${ticketNumber.offsetWidth}px`);
   // With everyone on the board, the "come in" ticket turns pale and says
   // so instead.
-  quickIn.querySelector(".ticket-text").textContent = waiting.length ? "come in" : "all here!";
-  quickIn.classList.toggle("all-here", waiting.length === 0);
+  ticketIn.querySelector(".ticket-text").textContent = waiting.length ? "come in" : "all here!";
+  ticketIn.classList.toggle("all-here", waiting.length === 0);
   fitFooter();
-  quickIn.setAttribute("aria-label", waiting.length ? `come in, ${waiting.length} MaWiLos to meet` : "all here");
-  box.classList.toggle("empty", waiting.length === 0);
-  quickIn.disabled = waiting.length === 0;
-  quickBye.disabled = byeChoices().length === 0;
-  box.setAttribute("aria-label", `Photo stack, ${waiting.length} MaWiLos to meet`);
+  ticketIn.setAttribute("aria-label", waiting.length ? `come in, ${waiting.length} MaWiLos to meet` : "all here");
+  ticketIn.disabled = waiting.length === 0;
+  ticketBye.disabled = byeChoices().length === 0;
+  stack.setAttribute("aria-label", `Photo stack, ${waiting.length} MaWiLos to meet`);
   if (album.classList.contains("open")) syncAlbum();
 }
 
@@ -421,9 +424,9 @@ async function closeAlbum() {
 
 document.getElementById("album-close").addEventListener("click", closeAlbum);
 
-box.addEventListener("click", () => {
+stack.addEventListener("click", () => {
   if (!reducedMotion) {
-    boxPile.animate(
+    stackPile.animate(
       [{ transform: "rotate(0deg)" }, { transform: "rotate(-6deg)" }, { transform: "rotate(4deg)" }, { transform: "rotate(0deg)" }],
       { duration: 500, easing: "ease-out" },
     );
@@ -532,7 +535,7 @@ function makeFigure(name, pos, state) {
   place(f);
   enableDrag(f);
   figures.set(name, f);
-  syncBox();
+  syncStack();
   return f;
 }
 
@@ -568,17 +571,22 @@ async function moveTo(f, x, y, how, ms) {
 }
 
 // A MaWiLo leaves quietly: it walks off the nearer side of the screen.
-async function sendOff(f) {
+function sendOff(f) {
+  f.gone ??= walkOff(f);
+  return f.gone;
+}
+
+async function walkOff(f) {
   f.state = "leaving";
   // Its photo goes back on top of the stack straight away.
   offstage = [f.name, ...offstage.filter((n) => n !== f.name)];
-  syncBox();
+  syncStack();
   const { w } = extent(f);
   const x = f.x < 0.5 ? -w : 1 + w;
   await moveTo(f, x, f.y, "walk", clamp(Math.abs(x - f.x) * innerWidth * 4, 1200, 2400));
   f.el.remove();
   figures.delete(f.name);
-  syncBox();
+  syncStack();
 }
 
 // Where a pointer is on a figure, as a fraction of its half-width and
@@ -699,7 +707,7 @@ function enableDrag(f) {
   );
 
   f.el.addEventListener("pointerdown", (event) => {
-    if (f.state === "leaving" || !document.body.classList.contains("footer-in")) return;
+    if (f.state === "leaving" || f.carrying) return;
     event.preventDefault();
     // A second finger is part of a pinch, not a new grab, whether it lands
     // on the same MaWiLo or another one.
@@ -791,7 +799,7 @@ function enableDrag(f) {
       sendOff(f);
       return;
     }
-    syncBox();
+    syncStack();
   };
   f.el.addEventListener("pointerup", drop);
   f.el.addEventListener("pointercancel", drop);
@@ -1030,7 +1038,7 @@ let solid = SOLID;
 
 function crowdSolid(bodies) {
   const t = titleRect();
-  const k = boxRect();
+  const k = footerRect();
   const free =
     innerWidth * innerHeight - (t.right - t.left) * (t.bottom - t.top) - (k.right - k.left) * (k.bottom - k.top);
   const used = bodies.reduce((sum, b) => sum + b.full.width * b.full.height, 0);
@@ -1102,9 +1110,9 @@ function startBumping() {
       b.box.w = b.box.full.width * solid;
       b.box.h = b.box.full.height * solid;
     }
-    // The title and the photo box are solid too, but never move.
+    // The title and the footer are solid too, but never move.
     const t = titleRect();
-    const k = boxRect();
+    const k = footerRect();
     for (const r of [t, k]) {
       bodies.push({
         box: { cx: (r.left + r.right) / 2, cy: (r.top + r.bottom) / 2, w: r.right - r.left, h: r.bottom - r.top },
@@ -1288,7 +1296,7 @@ function nudgeCard() {
 function syncInert() {
   const cardOpen = !card.hidden;
   const albumOpen = !album.hidden;
-  for (const el of [board, document.getElementById("title"), document.querySelector(".footer")]) {
+  for (const el of [board, document.getElementById("title"), footer]) {
     el.inert = cardOpen || albumOpen;
   }
   album.inert = cardOpen;
@@ -1333,29 +1341,31 @@ async function stepCard(direction) {
   const i = MAWILO_DATA.findIndex((m) => m.file === cardFile);
   const next = MAWILO_DATA[(i + direction + n) % n].file;
   const parts = [card.querySelector(".card-picture"), card.querySelector(".card-text")];
-  if (reducedMotion) {
-    fillCard(next);
-  } else {
-    const out = { duration: 180, easing: "ease-in", fill: "forwards" };
-    await Promise.all(
-      parts.map(
-        (el) =>
-          el.animate([{ transform: "translateX(0)", opacity: 1 }, { transform: `translateX(${-direction * 48}px)`, opacity: 0 }], out)
-            .finished,
+  const slide = (from, to, options) =>
+    Promise.all(
+      parts.map((el) =>
+        el
+          .animate(
+            [
+              { transform: `translateX(${from}px)`, opacity: from ? 0 : 1 },
+              { transform: `translateX(${to}px)`, opacity: to ? 0 : 1 },
+            ],
+            options,
+          )
+          .finished.catch(() => {}),
       ),
     );
+  // Whatever happens part way, the card always ends up filled and fully
+  // shown, and stepping is free again.
+  try {
+    if (!reducedMotion) await slide(0, -direction * 48, { duration: 180, easing: "ease-in", fill: "forwards" });
     fillCard(next);
-    await Promise.all(
-      parts.map((el) => {
-        el.getAnimations().forEach((a) => a.cancel());
-        return el.animate(
-          [{ transform: `translateX(${direction * 48}px)`, opacity: 0 }, { transform: "translateX(0)", opacity: 1 }],
-          { duration: 260, easing: "ease-out" },
-        ).finished;
-      }),
-    );
+    for (const el of parts) el.getAnimations().forEach((a) => a.cancel());
+    if (!reducedMotion) await slide(direction * 48, 0, { duration: 260, easing: "ease-out" });
+  } finally {
+    for (const el of parts) el.getAnimations().forEach((a) => a.cancel());
+    stepping = false;
   }
-  stepping = false;
 }
 
 document.getElementById("card-prev").addEventListener("click", () => stepCard(-1));
@@ -1393,11 +1403,11 @@ card.addEventListener("pointerdown", (event) => {
 card.addEventListener("pointerup", (event) => {
   if (event.pointerType === "mouse") swipeTo(event.clientX, event.clientY);
 });
-const cardFlip = document.getElementById("card-flip");
-cardFlip.addEventListener("click", () => {
+const cardPhotos = document.getElementById("card-photos");
+cardPhotos.addEventListener("click", () => {
   if (!swiped) shufflePhotos();
 });
-cardFlip.addEventListener("keydown", (event) => {
+cardPhotos.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" && event.key !== " ") return;
   event.preventDefault();
   shufflePhotos();
@@ -1411,17 +1421,9 @@ addEventListener("keydown", (event) => {
   if (event.key === "ArrowLeft") stepCard(-1);
   if (event.key === "ArrowRight") stepCard(1);
 });
-board.addEventListener("pointerdown", (event) => {
-  if (event.target === board) closeCard();
-});
-
 const SIGN_CARRIERS = ["blue-tassels-striped-body", "blue-striped-dress"];
 // Ziggy, on the right, leans this far towards Bobble.
 const PAIR_LEAN = -40;
-
-function titleRestingPlace(title) {
-  return { x: (innerWidth - title.offsetWidth) / 2, y: TOP_GAP };
-}
 
 function moveTitle(title, x, y, scale = 1) {
   title.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
@@ -1448,15 +1450,17 @@ async function intro(onStage, layout) {
     const f = makeFigure(name, { ...(target || { r: 0 }), y: 2 }, target ? "resident" : "leaving");
     // The right carrier leans left so the two face each other.
     f.r = i === 1 ? PAIR_LEAN : 0;
-    // Carry the sign a little bigger than normal.
+    // Carry the sign a little bigger than normal. While carrying, the pair
+    // cannot be grabbed.
     setSize(f, 1.15);
+    f.carrying = true;
     return { f, target };
   });
 
   addEventListener("resize", () => {
     if (!title.classList.contains("floating")) return;
-    const top = titleRestingPlace(title);
-    moveTitle(title, top.x, top.y);
+    const top = titleRect();
+    moveTitle(title, top.left, top.top);
   });
 
   const leave = (f) => {
@@ -1466,11 +1470,13 @@ async function intro(onStage, layout) {
   };
 
   if (reducedMotion) {
-    const top = titleRestingPlace(title);
-    moveTitle(title, top.x, top.y);
+    const top = titleRect();
+    moveTitle(title, top.left, top.top);
     title.classList.add("shown", "floating");
     openFooter();
     for (const { f, target } of [...entering, ...carriers]) {
+      f.parked = false;
+      f.carrying = false;
       if (!target) {
         leave(f);
         continue;
@@ -1482,10 +1488,7 @@ async function intro(onStage, layout) {
     return;
   }
 
-  await Promise.all([
-    document.fonts.ready,
-    ...[...carriers, ...entering].map(({ f }) => f.img.decode().catch(() => {})),
-  ]);
+  await Promise.all([...carriers, ...entering].map(({ f }) => f.img.decode().catch(() => {})));
 
   // The carriers walk side by side under the sign, close enough to touch.
   const widths = carriers.map(({ f }) => extent(f).w);
@@ -1542,9 +1545,10 @@ async function intro(onStage, layout) {
   }
   await wait(650);
   carrying = false;
+  for (const { f } of carriers) f.carrying = false;
   title.classList.add("floating");
-  const top = titleRestingPlace(title);
-  moveTitle(title, top.x, top.y);
+  const top = titleRect();
+  moveTitle(title, top.left, top.top);
   title.firstElementChild.animate(
     [
       { transform: "rotate(0deg)" },
@@ -1560,7 +1564,7 @@ async function intro(onStage, layout) {
 
   // Shrink and tilt to their places on the board while they walk there, so
   // they do not snap to them at the end.
-  const carriersDone = carriers.map(({ f, target }, i) => {
+  const carriersDone = carriers.map(({ f, target }) => {
     if (!target) return sendOff(f);
     const done = moveTo(f, target.x, target.y, "walk", 2000);
     f.r = target.r;
@@ -1608,19 +1612,18 @@ async function intro(onStage, layout) {
 async function start() {
   buildAlbum();
   await Promise.all([loadAspects(), document.fonts.ready]);
-  const walkers = MAWILO_DATA.map((m) => m.file);
+  const everyone = MAWILO_DATA.map((m) => m.file);
   // Bobble and Ziggy always start on the board, and so do the MaWiLos with
   // stop-motion tricks, so they can show them off in the intro.
   const tricksters = MAWILO_DATA.filter((m) => m.move === "trick").map((m) => m.file);
   const always = [...SIGN_CARRIERS, ...tricksters];
-  const others = shuffle(walkers.filter((n) => !always.includes(n)));
+  const others = shuffle(everyone.filter((n) => !always.includes(n)));
   const wanted = [...always, ...others.slice(0, Math.max(0, capacity() - always.length))];
   const layout = scatterLayout(wanted);
   const onStage = wanted.filter((n) => layout[n]);
-  offstage = shuffle(MAWILO_DATA.map((m) => m.file).filter((n) => !onStage.includes(n)));
+  offstage = shuffle(everyone.filter((n) => !onStage.includes(n)));
   await intro(onStage, layout);
-  document.body.classList.add("ready");
-  syncBox();
+  syncStack();
   if (!reducedMotion) startIdleMoves();
 }
 

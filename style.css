@@ -94,7 +94,7 @@ body {
 
 /* Tickets: paper stubs with a notch in each end and a dashed tear line,
    like raffle tickets. Each sits at a slight tilt and wobbles when pressed. */
-.quick {
+.tickets {
   /* A dark offset shadow, like ink on the printed title. It sits on the
      row, because the notched tickets would cut it off. */
   filter: drop-shadow(2px 2px 0 var(--ink));
@@ -135,7 +135,7 @@ body {
 }
 
 /* "come in" is the main ticket and a little bigger. */
-.quick-in {
+.ticket-in {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -145,25 +145,25 @@ body {
   transform: rotate(-4deg);
 }
 
-.quick-in::before {
+.ticket-in::before {
   left: calc(16px + var(--stub, 16px) + 7px);
 }
 
-.quick-in.all-here::before {
+.ticket-in.all-here::before {
   display: none;
 }
 
-.quick-bye {
+.ticket-bye {
   background: var(--turquoise);
   font-size: 16px;
   transform: rotate(3deg);
 }
 
-.quick-in:hover {
+.ticket-in:hover {
   transform: rotate(-1deg) translateY(-3px);
 }
 
-.quick-bye:hover {
+.ticket-bye:hover {
   transform: rotate(1deg) translateY(-3px);
 }
 
@@ -177,8 +177,8 @@ body {
 }
 
 /* The photo stack shows a small pile of instant photos of the MaWiLos
-   still to meet, with a count. Tapping it opens the album. */
-.box {
+   still to meet. Tapping it opens the album. */
+.stack {
   position: relative;
   width: 92px;
   height: 104px;
@@ -188,24 +188,16 @@ body {
   cursor: pointer;
 }
 
-.box.empty .pile-photo {
-  opacity: 0.4;
-}
-
 /* The count of MaWiLos still to meet sits on the stub of the "come in"
-   ticket, left of the tear line, like a ticket number. */
-/* The number keeps one width, so the ticket does not change size as the
-   count goes from two digits to one. */
+   ticket, left of the tear line, like a ticket number. It keeps one width,
+   so the ticket does not change size as the count goes from two digits to
+   one. */
 .ticket-number {
   min-width: 1.5em;
   text-align: center;
   font: 600 12px/1 "Outfit", system-ui, sans-serif;
   letter-spacing: 0;
   opacity: 0.9;
-}
-
-.ticket-number[hidden] {
-  display: none;
 }
 
 .pile {
@@ -247,19 +239,19 @@ body {
 }
 
 /* On hover the pile fans out a little, inviting a look. */
-.box:hover .pile-photo:nth-child(1) {
+.stack:hover .pile-photo:nth-child(1) {
   transform: rotate(-16deg) translate(-12px, 6px);
 }
 
-.box:hover .pile-photo:nth-child(2) {
+.stack:hover .pile-photo:nth-child(2) {
   transform: rotate(13deg) translate(12px, 2px);
 }
 
-.box:hover .pile-photo:nth-child(3) {
+.stack:hover .pile-photo:nth-child(3) {
   transform: rotate(-2deg) translateY(-6px);
 }
 
-.box:focus-visible {
+.stack:focus-visible {
   outline: 2px solid var(--turquoise);
   outline-offset: 4px;
   border-radius: 8px;
@@ -327,7 +319,8 @@ body {
   transition: transform 120ms ease-out;
 }
 
-/* A figure pulled in from the edge keeps its size and angle. */
+/* A MaWiLo grabbed while it is still partly off screen keeps its size and
+   angle until it is fully on the board. */
 .mawilo.lifted.from-edge {
   transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(1);
 }
@@ -396,7 +389,6 @@ body {
   }
 }
 
-
 /* The small "next" ticket on phone cards. */
 .card-next-ticket {
   display: none;
@@ -419,7 +411,7 @@ body {
   inset: 0;
   z-index: 1500;
   overflow-y: auto;
-  padding: 56px 16px 32px;
+  padding: 0 16px 32px;
   background: rgb(247 241 232 / 0.97);
   opacity: 0;
   transition: opacity 300ms ease;
@@ -432,6 +424,7 @@ body {
 .album-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  /* Long names are cut short instead of widening their column. */
   gap: 22px 16px;
   max-width: 1100px;
   margin: 0 auto;
@@ -475,11 +468,21 @@ body {
   text-overflow: ellipsis;
 }
 
+/* A slim header row stays at the top while the grid scrolls under it, so
+   the close button never sits over a photo. */
+.album-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 -16px 14px;
+  padding: 6px 10px;
+  background: var(--bg);
+  box-shadow: 0 6px 10px -8px rgb(59 36 22 / 0.25);
+}
+
 .album-close {
-  position: fixed;
-  top: 10px;
-  right: 12px;
-  z-index: 1;
   width: 40px;
   height: 40px;
   border: 0;
@@ -496,7 +499,7 @@ body {
 
 @media (max-width: 520px) {
   .album-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px 12px;
   }
 
@@ -564,7 +567,7 @@ body {
   overflow-y: auto;
 }
 
-.card-flip {
+.card-photos {
   cursor: pointer;
   position: relative;
 }
@@ -602,11 +605,16 @@ body {
   object-fit: cover;
 }
 
+/* The name strip has a fixed height, so a shrunk long name does not make
+   its photo shorter. */
 .card-photo h2,
 .card-photo-name {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60px;
   margin: 0;
-  padding: 10px 4px 14px;
+  padding: 0 4px 4px;
   text-align: center;
   white-space: nowrap;
   font-family: "Slackey", "Outfit", system-ui, sans-serif;
@@ -730,14 +738,10 @@ body {
     display: block;
   }
 
-  .card-flip {
-    z-index: 1;
-  }
-
   .card-photo h2,
   .card-photo-name {
+    height: 40px;
     font-size: 18px;
-    padding: 8px 4px 10px;
   }
 
   .card-story {
@@ -755,6 +759,10 @@ body {
   .card.open,
   .title.floating,
   .footer > *,
+  .ticket,
+  .pile-photo,
+  .album-photo,
+  .card-step,
   .album {
     transition: none;
   }

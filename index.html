@@ -17,21 +17,23 @@
   <h1 class="title" id="title"><span class="title-text">MaWiLos</span></h1>
   <main class="board" id="board" aria-label="MaWiLos you can drag around"></main>
   <footer class="footer">
-    <button class="box" id="box" type="button">
-      <span class="pile" id="box-pile" aria-hidden="true">
+    <button class="stack" id="stack" type="button">
+      <span class="pile" id="stack-pile" aria-hidden="true">
         <span class="pile-photo"><img alt="" draggable="false"></span>
         <span class="pile-photo"><img alt="" draggable="false"></span>
         <span class="pile-photo"><img alt="" draggable="false"></span>
       </span>
     </button>
-    <div class="quick">
-      <button class="ticket quick-in" id="quick-in" type="button" aria-label="come in, a surprise MaWiLo"><span class="ticket-number" id="box-count"></span><span class="ticket-text">come in</span></button>
-      <button class="ticket quick-bye" id="quick-bye" type="button" aria-label="bye, to a surprise MaWiLo"><span>bye</span></button>
+    <div class="tickets">
+      <button class="ticket ticket-in" id="ticket-in" type="button" aria-label="come in"><span class="ticket-number" id="ticket-number"></span><span class="ticket-text">come in</span></button>
+      <button class="ticket ticket-bye" id="ticket-bye" type="button" aria-label="bye, to a surprise MaWiLo"><span>bye</span></button>
     </div>
   </footer>
 
   <div class="album" id="album" role="dialog" aria-modal="true" aria-label="All MaWiLos" hidden>
-    <button class="album-close" id="album-close" type="button" aria-label="Close">×</button>
+    <div class="album-header">
+      <button class="album-close" id="album-close" type="button" aria-label="Close">×</button>
+    </div>
     <div class="album-grid" id="album-grid"></div>
   </div>
 
@@ -44,7 +46,7 @@
       <svg viewBox="0 0 14 48" aria-hidden="true"><path d="M3 3l8 21-8 21" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
     </button>
     <div class="card-picture">
-      <div class="card-flip" id="card-flip" role="button" tabindex="0" aria-label="Shuffle the photos">
+      <div class="card-photos" id="card-photos" role="button" tabindex="0" aria-label="Shuffle the photos">
         <figure class="card-photo front on-top">
           <img id="card-img" alt="">
           <h2 id="card-title"></h2>
