@@ -379,6 +379,12 @@ function centreSpot(name) {
   return validSpot(p, box) ? p : freeSpot(name);
 }
 
+// A height to walk in from, anywhere between just under the title and the
+// bottom of the screen.
+function entryY() {
+  return rand(titleRect().bottom / innerHeight + 0.04, 0.94);
+}
+
 // Bring a MaWiLo in from offstage. It heads for the middle and bumps the
 // others out of the way.
 async function invite(name) {
@@ -391,8 +397,8 @@ async function invite(name) {
   await g.img.decode().catch(() => {});
   const { w } = extent(g);
   g.x = spot.x < 0.5 ? -w / 2 : 1 + w / 2;
-  // Come in on a slight diagonal, from a little above or below.
-  g.y = clamp(spot.y + rand(-0.14, 0.14), 0.2, 0.92);
+  // Come in from anywhere between just under the title and the bottom.
+  g.y = entryY();
   place(g);
   void g.el.offsetWidth;
   const px = Math.abs(spot.x - g.x) * innerWidth;
@@ -1403,18 +1409,23 @@ async function intro(onStage, layout) {
     return done;
   });
 
-  const order = entering.sort((a, b) => a.target.x - b.target.x);
+  // They come in a random order with uneven gaps, mostly from the nearer
+  // side but sometimes from the far one, each at its own pace.
+  const order = shuffle(entering);
+  let start = 0;
+  const starts = order.map(() => (start += rand(80, 520)));
   await Promise.all([
     ...carriersDone,
     ...order.map(async ({ f, target }, i) => {
-      await wait(i * 260);
-      const { w, h } = extent(f);
-      const edge = nearestEdge(target);
-      f.x = edge === "left" ? -w / 2 : edge === "right" ? 1 + w / 2 : target.x;
-      f.y = edge === "bottom" ? 1 + h / 2 : clamp(target.y + rand(-0.14, 0.14), 0.2, 0.92);
+      await wait(starts[i]);
+      const { w } = extent(f);
+      const near = target.x < 0.5 ? "left" : "right";
+      const side = Math.random() < 0.75 ? near : near === "left" ? "right" : "left";
+      f.x = side === "left" ? -w / 2 : 1 + w / 2;
+      f.y = entryY();
       place(f);
       void f.el.offsetWidth;
-      await moveTo(f, target.x, target.y, "walk", rand(1700, 2300));
+      await moveTo(f, target.x, target.y, "walk", rand(1500, 2900));
     }),
   ]);
 

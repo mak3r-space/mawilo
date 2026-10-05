@@ -193,7 +193,9 @@ body {
   width: 70px;
   padding: 4px 4px 14px;
   background: #fff;
-  box-shadow: 0 2px 6px rgb(59 36 22 / 0.2);
+  box-shadow:
+    0 1px 2px rgb(59 36 22 / 0.15),
+    0 6px 16px rgb(59 36 22 / 0.28);
   transition: transform 300ms cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
